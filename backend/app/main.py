@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
-from app.api.routes import market, stocks, system
+from app.api.routes import market, stocks, system, watchlist
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.database.session import init_db
@@ -99,6 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(system.router)
     app.include_router(market.router)
     app.include_router(stocks.router)
+    app.include_router(watchlist.router)
     return app
 
 

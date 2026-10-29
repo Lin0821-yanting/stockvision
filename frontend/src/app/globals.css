@@ -47,6 +47,17 @@
   --color-down: var(--down);
   --color-flat: var(--flat);
 
+  /* 圖表：類別色依固定順序使用（已用 dataviz validator 對深色卡片 #111114 驗證） */
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
+  --color-series-4: var(--series-4);
+  --color-chart-up: var(--chart-up);
+  --color-chart-down: var(--chart-down);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-axis: var(--chart-axis);
+  --color-chart-muted: var(--chart-muted);
+
   --animate-flash-up: flash-up 1.2s ease-out;
   --animate-flash-down: flash-down 1.2s ease-out;
 
@@ -105,6 +116,15 @@
   --up: oklch(0.577 0.245 27.325);
   --down: oklch(0.627 0.194 149.214);
   --flat: oklch(0.552 0.016 285.938);
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --chart-up: #e34948;
+  --chart-down: #0a8a3a;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-muted: #898781;
 }
 
 /* 預設深色 FinTech 主題：近黑背景、藍色強調 */
@@ -143,6 +163,16 @@
   --up: oklch(0.704 0.191 22.216);
   --down: oklch(0.792 0.209 151.711);
   --flat: oklch(0.705 0.015 286.067);
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  /* 漲跌長條：紅綠對色盲的區分度在 6–8 警示帶，因此長條一定搭配正負方向與 ▲▼ 標示 */
+  --chart-up: #f0524f;
+  --chart-down: #0f9d58;
+  --chart-grid: #232328;
+  --chart-axis: #3a3a40;
+  --chart-muted: #6b6b76;
 }
 
 @layer base {
