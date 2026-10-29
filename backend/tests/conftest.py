@@ -129,11 +129,16 @@ class FakeUpstream:
         self.mis_response: httpx.Response | None = None
         self.mis_calls: list[str] = []
         self.twse_day_all: list[dict[str, Any]] = []
+        self.twse_companies: list[dict[str, Any]] = []
         self.tpex_daily: list[dict[str, Any]] = []
         self.finnhub: dict[str, dict[str, Any]] = {}
+        self.finnhub_calls: list[str] = []
 
         router.route(host="api.finmindtrade.com", path="/api/v4/data").mock(side_effect=self._finmind)
         router.route(host="mis.twse.com.tw").mock(side_effect=self._mis)
+        router.route(host="openapi.twse.com.tw", path="/v1/opendata/t187ap03_L").mock(
+            side_effect=lambda _: httpx.Response(200, json=self.twse_companies)
+        )
         router.route(host="openapi.twse.com.tw").mock(side_effect=lambda _: httpx.Response(200, json=self.twse_day_all))
         router.route(host="www.tpex.org.tw").mock(side_effect=lambda _: httpx.Response(200, json=self.tpex_daily))
         router.route(host="finnhub.io").mock(side_effect=self._finnhub)
@@ -158,7 +163,9 @@ class FakeUpstream:
 
     def _finnhub(self, request: httpx.Request) -> httpx.Response:
         empty = {"c": 0, "d": None, "dp": None, "h": 0, "l": 0, "o": 0, "pc": 0, "t": 0}
-        return httpx.Response(200, json=self.finnhub.get(request.url.params.get("symbol"), empty))
+        symbol = request.url.params.get("symbol")
+        self.finnhub_calls.append(symbol)
+        return httpx.Response(200, json=self.finnhub.get(symbol, empty))
 
 
 @pytest.fixture

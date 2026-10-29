@@ -33,8 +33,9 @@ MIS_RECENT_WINDOW_SECONDS = 120
 MIS_BATCH_LIMIT = 40
 FINNHUB_TTL_SECONDS = 15
 REALTIME_MAX_AGE = timedelta(minutes=30)
+US_INDEX_NOTE = "美股指數只有每日收盤資料（FinMind；Finnhub 免費方案不提供指數報價）"
 
-# 最近被查詢過的台股；抓 MIS 時一併更新，其他頁面的請求就能直接使用快取
+# 最近被查詢過的台股（key 是 MIS 代碼）；抓 MIS 時一併更新，其他頁面的請求就能直接使用快取
 _recent_tw: dict[str, tuple[tuple[str, str], float]] = {}
 _last_mis_call = 0.0
 
@@ -85,18 +86,18 @@ async def _fetch_mis(entries: list[StockEntry]) -> dict[str, tuple[MisQuote, dat
     for stale in [s for s, (_, ts) in _recent_tw.items() if now_mono - ts > MIS_RECENT_WINDOW_SECONDS]:
         _recent_tw.pop(stale, None)
     for entry in entries:
-        _recent_tw[entry.symbol] = (entry.mis_channel, now_mono)
+        _recent_tw[entry.mis_channel[1]] = (entry.mis_channel, now_mono)
 
-    def cached(symbol: str):
-        return cache.get(f"mis:{symbol}")
+    def cached(code: str):
+        return cache.get(f"mis:{code}")
 
-    missing = [entry.symbol for entry in entries if cached(entry.symbol) is None]
+    missing = [entry.mis_channel[1] for entry in entries if cached(entry.mis_channel[1]) is None]
     if missing:
         async with cache.lock("mis"):
-            still_missing = [symbol for symbol in missing if cached(symbol) is None]
+            still_missing = [code for code in missing if cached(code) is None]
             if still_missing:
-                extra = [channel for symbol, (channel, _) in _recent_tw.items() if symbol not in still_missing]
-                channels = ([_recent_tw[symbol][0] for symbol in still_missing] + extra)[:MIS_BATCH_LIMIT]
+                extra = [channel for code, (channel, _) in _recent_tw.items() if code not in still_missing]
+                channels = ([_recent_tw[code][0] for code in still_missing] + extra)[:MIS_BATCH_LIMIT]
                 wait = MIS_MIN_INTERVAL_SECONDS - (time.monotonic() - _last_mis_call)
                 if wait > 0:
                     await asyncio.sleep(wait)
@@ -105,10 +106,11 @@ async def _fetch_mis(entries: list[StockEntry]) -> dict[str, tuple[MisQuote, dat
                 finally:
                     _last_mis_call = time.monotonic()
                 fetched_at = clock.now()
-                for symbol, quote in quotes.items():
-                    cache.set(f"mis:{symbol}", (quote, fetched_at), MIS_TTL_SECONDS)
+                for code, quote in quotes.items():
+                    cache.set(f"mis:{code}", (quote, fetched_at), MIS_TTL_SECONDS)
 
-    return {entry.symbol: cached(entry.symbol) for entry in entries if cached(entry.symbol) is not None}
+    found = {entry.symbol: cached(entry.mis_channel[1]) for entry in entries}
+    return {symbol: item for symbol, item in found.items() if item is not None}
 
 
 def _from_mis(entry: StockEntry, mis: MisQuote, fetched_at: datetime, now: datetime) -> QuoteOut:
@@ -240,11 +242,12 @@ async def _us_quotes(entries: list[StockEntry]) -> dict[str, QuoteResult]:
         return {}
     now = clock.now()
     results: dict[str, QuoteResult] = {}
-    fallbacks: list[tuple[StockEntry, str]] = []
+    fallbacks: list[tuple[StockEntry, str]] = [(entry, US_INDEX_NOTE) for entry in entries if entry.is_index]
+    stocks = [entry for entry in entries if not entry.is_index]
 
     if get_settings().finnhub_configured:
-        fetched = await asyncio.gather(*(_finnhub_cached(entry.symbol) for entry in entries), return_exceptions=True)
-        for entry, item in zip(entries, fetched):
+        fetched = await asyncio.gather(*(_finnhub_cached(entry.symbol) for entry in stocks), return_exceptions=True)
+        for entry, item in zip(stocks, fetched):
             if isinstance(item, BaseException):
                 fallbacks.append((entry, "Finnhub 暫時無法取得報價，顯示最近交易日收盤"))
             elif item[0] is None:
@@ -252,7 +255,7 @@ async def _us_quotes(entries: list[StockEntry]) -> dict[str, QuoteResult]:
             else:
                 results[entry.key] = QuoteResult(entry, await _from_finnhub(entry, item[0], item[1], now))
     else:
-        fallbacks = [(entry, "未設定 Finnhub API Key，美股顯示最近交易日收盤（非即時）") for entry in entries]
+        fallbacks += [(entry, "未設定 Finnhub API Key，美股顯示最近交易日收盤（非即時）") for entry in stocks]
 
     if fallbacks:
         done = await asyncio.gather(*(_daily_quote(entry, note, now) for entry, note in fallbacks))

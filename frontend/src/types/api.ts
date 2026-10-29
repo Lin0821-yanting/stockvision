@@ -170,6 +170,50 @@ export interface CompareResponse {
   fetched_at: string;
 }
 
+// ---------------------------------------------------------------- 大盤總覽
+
+export interface SparkPoint {
+  date: string;
+  close: number;
+}
+
+export interface OverviewItem {
+  rank: number | null;
+  symbol: string;
+  name: string;
+  exchange: string;
+  currency: Currency;
+  is_index: boolean;
+  market_cap: number | null;
+  quote: Quote | null;
+  quote_error: QuoteError | null;
+  points: SparkPoint[];
+  period_return_pct: number | null;
+  history_end: string | null;
+  history_error: string | null;
+}
+
+export interface OverviewRanking {
+  method: string;
+  source: string;
+  as_of: string | null;
+  note: string;
+}
+
+export interface MarketOverview {
+  market: Market;
+  period: Period;
+  market_open: boolean;
+  indices: OverviewItem[];
+  stocks: OverviewItem[];
+  ranking: OverviewRanking | null;
+  history_source: string;
+  data_note: string;
+  warnings: string[];
+  fetched_at: string;
+  triggered_alerts: AlertEvent[];
+}
+
 export interface MarketSession {
   market: Market;
   name: string;

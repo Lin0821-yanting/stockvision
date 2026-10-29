@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = False  # 部署到 HTTPS 時改成 true
     registration_enabled: bool = True
 
+    # 大盤總覽每個市場列出的公司數量
+    overview_size: int = Field(default=12, ge=4, le=30)
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

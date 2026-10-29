@@ -3,6 +3,7 @@ import type {
   FxRate,
   HistoryResponse,
   Market,
+  MarketOverview,
   MarketStatus,
   Period,
   QuotesResponse,
@@ -25,5 +26,7 @@ export const stocksApi = {
 
 export const marketApi = {
   status: () => apiRequest<MarketStatus>("/api/market/status"),
+  overview: (market: Market, period: Period) =>
+    apiRequest<MarketOverview>("/api/market/overview", { query: { market, period } }),
   usdTwd: () => apiRequest<FxRate>("/api/fx/usd-twd"),
 };

@@ -113,3 +113,32 @@ def usd_rate_rows() -> list[dict[str, Any]]:
         {"date": "2026-10-29", "currency": "USD", "cash_buy": 32.09, "cash_sell": 32.76, "spot_buy": 32.44, "spot_sell": 32.54},
         {"date": "2026-10-28", "currency": "USD", "cash_buy": 32.02, "cash_sell": 32.69, "spot_buy": -1, "spot_sell": -1},
     ]
+
+
+def twse_company_row(code: str, short_name: str, shares: int) -> dict[str, Any]:
+    """t187ap03_L（上市公司基本資料）的一筆資料，只保留排行會用到的欄位與幾個實際會出現的欄位。"""
+    return {
+        "出表日期": "1151028",
+        "公司代號": code,
+        "公司名稱": f"{short_name}股份有限公司",
+        "公司簡稱": short_name,
+        "外國企業註冊地國": "－ ",
+        "產業別": "24",
+        "普通股每股面額": "新台幣                 10.0000元",
+        "已發行普通股數或TDR原股發行股數": str(shares),
+    }
+
+
+def twse_day_row(code: str, name: str, close: float, change: float = 0.0) -> dict[str, Any]:
+    """STOCK_DAY_ALL（上市個股日成交資訊）的一筆資料。"""
+    return {
+        "Date": "1151028",
+        "Code": code,
+        "Name": name,
+        "TradeVolume": "21866835",
+        "OpeningPrice": f"{close:.2f}",
+        "HighestPrice": f"{close + 5:.2f}",
+        "LowestPrice": f"{close - 5:.2f}",
+        "ClosingPrice": f"{close:.2f}",
+        "Change": f"{change:.4f}",
+    }

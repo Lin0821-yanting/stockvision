@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 
-import { IDLE_REFRESH_MS, LIVE_REFRESH_MS, marketOf } from "@/lib/market";
+import { IDLE_REFRESH_MS, LIVE_REFRESH_MS, marketOf, OVERVIEW_LIVE_REFRESH_MS } from "@/lib/market";
 import { marketApi, stocksApi } from "@/services/stocks";
 import type { Market, Period } from "@/types/api";
 
@@ -50,6 +50,16 @@ export function useCompare(symbols: string[], period: Period) {
     keepPreviousData: true,
     revalidateOnFocus: false,
     onSuccess,
+  });
+}
+
+/** 大盤總覽：該市場開盤時每 30 秒更新，收盤後每 5 分鐘；enabled 為 false（還沒切到這一頁）時不載入 */
+export function useOverview(market: Market, period: Period, enabled = true) {
+  const onSuccess = useAlertTriggerHandler();
+  return useSWR(enabled ? ["overview", market, period] : null, () => marketApi.overview(market, period), {
+    keepPreviousData: true,
+    onSuccess,
+    refreshInterval: (latest) => (latest?.market_open ? OVERVIEW_LIVE_REFRESH_MS : IDLE_REFRESH_MS),
   });
 }
 

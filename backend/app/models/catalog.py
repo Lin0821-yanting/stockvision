@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import String
+from sqlalchemy import Float, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.session import Base
@@ -19,4 +19,6 @@ class StockCatalog(Base):
     name: Mapped[str] = mapped_column(String(200))
     exchange: Mapped[str] = mapped_column(String(16))
     industry: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    # 美股市值（美元，USStockInfo 的 MarketCap）；台股市值由證交所資料另外計算
+    market_cap: Mapped[float | None] = mapped_column(Float, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(UTCDateTime())

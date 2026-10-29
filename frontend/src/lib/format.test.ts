@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatDate,
+  formatMarketCap,
   formatMoney,
   formatPercent,
   formatPrice,
@@ -50,6 +51,14 @@ describe("漲跌幅與成交量", () => {
 
   it("日期字串不做時區轉換", () => {
     expect(formatDate("2026-10-29")).toBe("2026/10/29");
+  });
+
+  it("市值以兆／億顯示", () => {
+    expect(formatMarketCap(62_885_997_412_475, "TWD")).toBe("NT$ 62.89 兆");
+    expect(formatMarketCap(225_695_452_260, "TWD")).toBe("NT$ 2,257 億");
+    expect(formatMarketCap(5.25235e12, "USD")).toBe("US$ 5.25 兆");
+    expect(formatMarketCap(9.5e11, "USD")).toBe("US$ 9,500 億");
+    expect(formatMarketCap(null, "USD")).toBe("—");
   });
 });
 

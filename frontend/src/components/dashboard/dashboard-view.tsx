@@ -295,6 +295,14 @@ function PopularStocks() {
           熱門股票
         </CardTitle>
         <CardDescription>不用登入也能查看盤中報價與歷史走勢</CardDescription>
+        <CardAction>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/overview">
+              大盤總覽
+              <ArrowRight />
+            </Link>
+          </Button>
+        </CardAction>
       </CardHeader>
       <CardContent className="flex flex-wrap gap-2">
         {POPULAR_SYMBOLS.map((item) => (

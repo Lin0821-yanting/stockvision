@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import re
 from collections.abc import Callable, Iterable
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import delete, insert, select
@@ -24,6 +24,8 @@ logger = logging.getLogger("stockvision.catalog")
 
 CATALOG_TTL = timedelta(hours=24)
 RETRY_AFTER_FAILURE_SECONDS = 10 * 60
+# USStockInfo 裡有些代號停在很久以前的資料（例如 2024 年下市的股票），市值不可信
+STALE_MARKET_CAP_DAYS = 7
 _US_NAME_SUFFIX = re.compile(r"\s+(Common Stock|Ordinary Shares|Common Shares)\s*$", re.IGNORECASE)
 
 
@@ -71,6 +73,25 @@ def parse_us_info(rows: Iterable[dict[str, Any]]) -> list[StockEntry]:
     ]
 
 
+def parse_us_market_caps(rows: Iterable[dict[str, Any]]) -> dict[str, float]:
+    """每個代號最新一筆的 MarketCap；資料日期比整份清單最新日期早超過 7 天的不採用。"""
+    rows = list(rows)
+    latest = _latest_rows(rows, lambda symbol, _row: bool(US_PATTERN.match(symbol)))
+    dates = [str(row.get("date", "")) for row in latest.values() if row.get("date")]
+    if not dates:
+        return {}
+    cutoff = (date.fromisoformat(max(dates)) - timedelta(days=STALE_MARKET_CAP_DAYS)).isoformat()
+    caps: dict[str, float] = {}
+    for symbol, row in latest.items():
+        try:
+            value = float(row.get("MarketCap") or 0)
+        except (TypeError, ValueError):
+            continue
+        if value > 0 and str(row.get("date", "")) >= cutoff:
+            caps[symbol] = value
+    return caps
+
+
 def _last_refresh(db: Session, market: str) -> datetime | None:
     return db.scalar(
         select(StockCatalog.updated_at)
@@ -84,17 +105,18 @@ def _is_fresh(last: datetime | None) -> bool:
     return last is not None and clock.now() - last < CATALOG_TTL
 
 
-async def ensure_catalog(db: Session, market: str) -> None:
-    """清單不存在或超過 24 小時才向 FinMind 重新下載；下載失敗但已有舊清單時沿用舊清單。"""
-    if _is_fresh(_last_refresh(db, market)):
+async def ensure_catalog(db: Session, market: str, *, force: bool = False) -> None:
+    """清單不存在或超過 24 小時才向 FinMind 重新下載（force 會立即重新下載）；下載失敗但已有舊清單時沿用舊清單。"""
+    if not force and _is_fresh(_last_refresh(db, market)):
         return
     async with cache.lock(f"catalog:{market}"):
         last = _last_refresh(db, market)
-        if _is_fresh(last) or (last is not None and cache.get(f"catalog-retry:{market}")):
+        if not force and (_is_fresh(last) or (last is not None and cache.get(f"catalog-retry:{market}"))):
             return
         try:
             rows = await (finmind.taiwan_stock_info() if market == "TW" else finmind.us_stock_info())
             entries = parse_taiwan_info(rows) if market == "TW" else parse_us_info(rows)
+            caps = parse_us_market_caps(rows) if market == "US" else {}
             if not entries:
                 raise UpstreamError("FinMind 回傳的股票清單是空的", details={"source": "FinMind"})
         except UpstreamError:
@@ -115,6 +137,7 @@ async def ensure_catalog(db: Session, market: str) -> None:
                     "name": entry.name,
                     "exchange": entry.exchange,
                     "industry": entry.industry,
+                    "market_cap": caps.get(entry.symbol),
                     "updated_at": now,
                 }
                 for entry in entries
@@ -131,6 +154,26 @@ def _to_entry(row: StockCatalog) -> StockEntry:
         exchange=row.exchange,
         industry=row.industry,
     )
+
+
+def has_market_caps(db: Session, market: str) -> bool:
+    return db.scalar(
+        select(StockCatalog.symbol).where(StockCatalog.market == market, StockCatalog.market_cap.is_not(None)).limit(1)
+    ) is not None
+
+
+def market_cap_leaders(db: Session, market: str, limit: int) -> list[tuple[StockEntry, float]]:
+    rows = db.scalars(
+        select(StockCatalog)
+        .where(StockCatalog.market == market, StockCatalog.market_cap.is_not(None))
+        .order_by(StockCatalog.market_cap.desc())
+        .limit(limit)
+    )
+    return [(_to_entry(row), float(row.market_cap)) for row in rows]
+
+
+def last_refresh(db: Session, market: str) -> datetime | None:
+    return _last_refresh(db, market)
 
 
 def _escape_like(text: str) -> str:

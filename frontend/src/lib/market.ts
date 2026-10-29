@@ -18,6 +18,8 @@ export function exchangeLabel(exchange: string): string {
 /** 交易時段報價每 10 秒更新；非交易時段改成每 5 分鐘確認一次 */
 export const LIVE_REFRESH_MS = 10_000;
 export const IDLE_REFRESH_MS = 5 * 60_000;
+/** 大盤總覽一次載入 15 檔的報價與走勢，盤中改成每 30 秒更新 */
+export const OVERVIEW_LIVE_REFRESH_MS = 30_000;
 
 export const POPULAR_SYMBOLS: { symbol: string; name: string }[] = [
   { symbol: "2330", name: "台積電" },

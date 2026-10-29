@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from typing import Annotated
 
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_optional_user
 from app.core import clock
+from app.core.config import get_settings
 from app.core.market_hours import SESSIONS
+from app.database.session import get_db
+from app.models.user import User
 from app.schemas.common import ERROR_RESPONSES
 from app.schemas.market import FxRateOut, MarketSessionOut, MarketStatusOut
-from app.services import fx_service
+from app.schemas.overview import OverviewOut
+from app.schemas.stock import Market, Period
+from app.services import fx_service, overview_service
 
 router = APIRouter(prefix="/api", tags=["市況與匯率"])
 
@@ -39,3 +48,19 @@ def market_status() -> MarketStatusOut:
 @router.get("/fx/usd-twd", response_model=FxRateOut, summary="USD/TWD 匯率（美股模擬交易換算用）", responses=ERROR_RESPONSES)
 async def usd_twd() -> FxRateOut:
     return await fx_service.get_usd_twd()
+
+
+@router.get(
+    "/market/overview",
+    response_model=OverviewOut,
+    summary="大盤總覽：指數與市值前幾大公司的報價、走勢與期間報酬",
+    responses=ERROR_RESPONSES,
+)
+async def market_overview(
+    market: Annotated[Market, Query(description="TW 台股或 US 美股")] = "TW",
+    period: Annotated[Period, Query(description="走勢期間：1M、3M、6M 或 1Y")] = "1M",
+    limit: Annotated[int | None, Query(ge=4, le=30, description="列出的公司數量，預設為 OVERVIEW_SIZE（12）")] = None,
+    user: User | None = Depends(get_optional_user),
+    db: Session = Depends(get_db),
+) -> OverviewOut:
+    return await overview_service.get_overview(db, market, period, limit or get_settings().overview_size, user)

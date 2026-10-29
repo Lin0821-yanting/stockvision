@@ -97,6 +97,9 @@ def migrate(engine: Engine) -> list[str]:
         if "watchlist_items" in tables and "user_id" not in _columns(conn, "watchlist_items"):
             _rebuild_watchlist(conn)
             steps.append("watchlist_items rebuilt")
+        # 大盤總覽：股票清單加上美股市值（清單是可以重新下載的快取資料，不需要備份）
+        if "stock_catalog" in tables and ensure_column(conn, "stock_catalog", "market_cap", "FLOAT"):
+            steps.append("stock_catalog.market_cap")
     if steps:
         logger.warning("Database schema upgraded: %s", ", ".join(steps))
     return steps

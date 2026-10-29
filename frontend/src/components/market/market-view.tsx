@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Globe } from "lucide-react";
 
 import { PageHeader } from "@/components/common/page-header";
 import { CardSkeleton, ErrorState } from "@/components/common/states";
@@ -128,6 +130,28 @@ function StockOverview({ symbol }: { symbol: string }) {
   );
 }
 
+function OverviewEntry() {
+  return (
+    <Card className="gap-4" data-testid="overview-entry">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Globe className="size-4 text-primary" aria-hidden />
+          大盤總覽
+        </CardTitle>
+        <CardDescription>左右滑動切換台股與美股，一次看指數與市值前 12 大公司的走勢。</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        <Button asChild size="sm">
+          <Link href="/overview">看台股大盤</Link>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link href="/overview?market=US">看美股大盤</Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 function Welcome({ onPick }: { onPick: (symbol: string) => void }) {
   return (
     <Card>
@@ -172,7 +196,10 @@ export function MarketView() {
               {notFound ? null : <HistorySection key={`history-${symbol}`} symbol={symbol} />}
             </>
           ) : (
-            <Welcome onPick={select} />
+            <>
+              <OverviewEntry />
+              <Welcome onPick={select} />
+            </>
           )}
         </div>
         <aside className="min-w-0">

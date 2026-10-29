@@ -57,6 +57,14 @@ export function formatCompact(value: number | null | undefined): string {
   return value.toLocaleString(LOCALE, { notation: "compact", maximumFractionDigits: 2 });
 }
 
+/** 市值：以「兆／億」表示，例如 NT$ 62.89 兆、US$ 5.25 兆、US$ 9,500 億 */
+export function formatMarketCap(value: number | null | undefined, currency: Currency): string {
+  if (!isNumber(value)) return EMPTY;
+  const prefix = CURRENCY_PREFIX[currency];
+  if (value >= 1e12) return `${prefix} ${formatNumber(value / 1e12, 2)} 兆`;
+  return `${prefix} ${formatNumber(value / 1e8, 0)} 億`;
+}
+
 /** 成交量：台股以「張」（1 張 = 1,000 股）顯示，美股以「股」顯示 */
 export function formatVolume(shares: number | null | undefined, market: Market): string {
   if (!isNumber(shares)) return EMPTY;

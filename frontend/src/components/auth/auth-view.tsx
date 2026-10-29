@@ -234,7 +234,7 @@ export function AuthView() {
           {mode === "register" ? <RegisterForm key="register" /> : <LoginForm key="login" />}
           <p className="flex gap-2 text-xs leading-relaxed text-muted-foreground">
             <ShieldCheck className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-            密碼以 scrypt 加鹽雜湊保存在本機 SQLite；登入狀態存放在 HttpOnly Cookie，預設 7 天內不需重新登入。股票看盤與比較不登入也能使用。
+            密碼以 scrypt 加鹽雜湊保存在本機 SQLite；登入狀態存放在 HttpOnly Cookie，預設 7 天內不需重新登入。股票看盤、比較與大盤總覽不登入也能使用。
           </p>
         </CardContent>
       </Card>
