@@ -116,5 +116,11 @@ export const TONE_TEXT_CLASS: Record<Tone, string> = {
   flat: "text-muted-foreground",
 };
 
+/** 損益數字的文字顏色：正數紅、負數綠、零維持一般文字色 */
+export function signedValueClass(value: number | null | undefined): string {
+  const tone = toneOf(value);
+  return tone === "flat" ? "" : TONE_TEXT_CLASS[tone];
+}
+
 export const TONE_ARROW: Record<Tone, string> = { up: "▲", down: "▼", flat: "－" };
 export const TONE_LABEL: Record<Tone, string> = { up: "上漲", down: "下跌", flat: "平盤" };

@@ -152,3 +152,135 @@ export interface WatchlistItem {
 export interface WatchlistResponse {
   items: WatchlistItem[];
 }
+
+// ---------------------------------------------------------------- 模擬交易
+
+export type TradeSide = "BUY" | "SELL";
+
+export interface Account {
+  id: number;
+  base_currency: string;
+  initial_cash: number;
+  cash: number;
+  cycle: number;
+  created_at: string;
+  reset_at: string | null;
+}
+
+export interface Trade {
+  id: number;
+  cycle: number;
+  symbol: string;
+  market: Market;
+  name: string;
+  side: TradeSide;
+  shares: number;
+  price: number;
+  currency: Currency;
+  fx_rate: number;
+  fx_date: string | null;
+  gross_amount: number;
+  amount_twd: number;
+  fee_twd: number;
+  tax_twd: number;
+  realized_pnl_twd: number | null;
+  cash_after_twd: number;
+  price_kind: QuoteKind;
+  price_source: string;
+  price_as_of: string | null;
+  created_at: string;
+}
+
+export interface TradeRequest {
+  symbol: string;
+  side: TradeSide;
+  shares: number;
+}
+
+export interface TradePreview {
+  symbol: string;
+  market: Market;
+  name: string;
+  side: TradeSide;
+  shares: number;
+  price: number;
+  currency: Currency;
+  price_kind: QuoteKind;
+  price_source: string;
+  price_as_of: string | null;
+  fx_rate: number;
+  fx_date: string | null;
+  gross_amount: number;
+  amount_twd: number;
+  fee_twd: number;
+  tax_twd: number;
+  cash_before: number;
+  cash_after: number | null;
+  shares_held: number;
+  shares_after: number | null;
+  estimated_realized_pnl_twd: number | null;
+  can_execute: boolean;
+  reason: string | null;
+  reason_code: string | null;
+  disclaimer: string;
+}
+
+export interface TradeResult {
+  message: string;
+  trade: Trade;
+  account: Account;
+  disclaimer: string;
+}
+
+export interface TradeList {
+  scope: "current" | "all";
+  current_cycle: number;
+  trades: Trade[];
+}
+
+export interface Position {
+  symbol: string;
+  market: Market;
+  name: string;
+  exchange: string;
+  currency: Currency;
+  shares: number;
+  avg_cost: number;
+  cost_basis_twd: number;
+  current_price: number | null;
+  day_change_pct: number | null;
+  price_kind: QuoteKind | null;
+  price_source: string | null;
+  price_as_of: string | null;
+  fx_rate: number | null;
+  market_value: number | null;
+  market_value_twd: number | null;
+  unrealized_pnl_twd: number | null;
+  unrealized_pnl_pct: number | null;
+  realized_pnl_twd: number;
+  weight_pct: number | null;
+  quote_error: string | null;
+}
+
+export interface Portfolio {
+  account: Account;
+  positions: Position[];
+  cash_twd: number;
+  market_value_twd: number;
+  cost_basis_twd: number;
+  unrealized_pnl_twd: number;
+  realized_pnl_twd: number;
+  total_assets_twd: number;
+  total_pnl_twd: number;
+  roi_pct: number | null;
+  fx: FxRate | null;
+  incomplete: boolean;
+  warnings: string[];
+  as_of: string;
+  disclaimer: string;
+}
+
+export interface ResetResult {
+  message: string;
+  account: Account;
+}

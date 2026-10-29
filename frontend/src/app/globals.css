@@ -52,6 +52,8 @@
   --color-series-2: var(--series-2);
   --color-series-3: var(--series-3);
   --color-series-4: var(--series-4);
+  --color-series-5: var(--series-5);
+  --color-series-6: var(--series-6);
   --color-chart-up: var(--chart-up);
   --color-chart-down: var(--chart-down);
   --color-chart-grid: var(--chart-grid);
@@ -120,6 +122,8 @@
   --series-2: #eb6834;
   --series-3: #1baf7a;
   --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
   --chart-up: #e34948;
   --chart-down: #0a8a3a;
   --chart-grid: #e1e0d9;
@@ -167,6 +171,8 @@
   --series-2: #d95926;
   --series-3: #199e70;
   --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
   /* 漲跌長條：紅綠對色盲的區分度在 6–8 警示帶，因此長條一定搭配正負方向與 ▲▼ 標示 */
   --chart-up: #f0524f;
   --chart-down: #0f9d58;
