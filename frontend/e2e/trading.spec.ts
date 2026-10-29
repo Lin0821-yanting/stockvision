@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-import { resetState } from "./helpers";
+import { API, registerUser } from "./helpers";
 
-test.beforeEach(async ({ request }) => {
-  await resetState(request);
+test.beforeEach(async ({ page }) => {
+  await registerUser(page.request);
 });
 
 test("資金不足時無法下單並顯示原因", async ({ page }) => {
@@ -37,8 +37,8 @@ test("模擬買進後帳戶與持股更新，重新整理後仍存在", async ({
   await expect(page.getByTestId("trade-history")).toContainText("買進");
 });
 
-test("賣出超過持股會被拒絕，全部賣出後持股清空", async ({ page, request }) => {
-  await request.post("http://localhost:8001/api/trades", { data: { symbol: "2317", side: "BUY", shares: 10 } });
+test("賣出超過持股會被拒絕，全部賣出後持股清空", async ({ page }) => {
+  await page.request.post(`${API}/api/trades`, { data: { symbol: "2317", side: "BUY", shares: 10 } });
   await page.goto("/trading?symbol=2317");
   await page.getByRole("radio", { name: "賣出" }).click();
   await page.getByLabel("股數").fill("11");

@@ -9,6 +9,7 @@ import { defineConfig, devices } from "@playwright/test";
  *   前端 http://localhost:3001（建置到 .next-e2e）
  * 後端需要真實網路取得股票資料；Python 路徑可用 STOCKVISION_PYTHON 指定，
  * 預設使用目前環境的 python（請先 conda activate stockvision）。
+ * 每個測試透過 API 註冊自己的帳號（e2e/helpers.ts），資料互相隔離，不需要清空資料庫。
  */
 const BACKEND_PORT = 8001;
 const FRONTEND_PORT = 3001;
@@ -17,6 +18,7 @@ const python = process.env.STOCKVISION_PYTHON ?? "python";
 
 export default defineConfig({
   testDir: "./e2e",
+  globalSetup: "./e2e/global-setup.ts",
   timeout: 90_000,
   expect: { timeout: 30_000 },
   fullyParallel: false,

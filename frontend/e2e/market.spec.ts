@@ -1,10 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-import { resetState } from "./helpers";
-
-test.beforeEach(async ({ request }) => {
-  await resetState(request);
-});
+import { registerUser } from "./helpers";
 
 test("搜尋 2330 顯示台積電的真實報價與資料來源", async ({ page }) => {
   await page.goto("/market");
@@ -37,6 +33,7 @@ test("切換 1 個月與 1 年時圖表跟著資料更新", async ({ page }) => 
 });
 
 test("加入自選股後重新整理仍然存在", async ({ page }) => {
+  await registerUser(page.request);
   await page.goto("/market?symbol=2317");
   const toggle = page.getByTestId("watchlist-toggle");
   await expect(toggle).toHaveText(/加入自選/);

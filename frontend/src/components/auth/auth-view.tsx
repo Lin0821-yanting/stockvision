@@ -6,7 +6,7 @@ import { LoaderCircle, LogIn, ShieldCheck, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -217,7 +217,7 @@ export function AuthView() {
     <div className="mx-auto w-full max-w-md py-4 sm:py-10">
       <Card className="gap-5">
         <CardHeader>
-          <CardTitle className="text-xl">{mode === "register" ? "建立 StockVision 帳號" : "登入 StockVision"}</CardTitle>
+          <h1 className="text-xl leading-none font-semibold">{mode === "register" ? "建立 StockVision 帳號" : "登入 StockVision"}</h1>
           <CardDescription>
             {mode === "register"
               ? "每個帳號都有自己的 NT$1,000,000 模擬資金、自選股與價格提醒，彼此互不影響。"

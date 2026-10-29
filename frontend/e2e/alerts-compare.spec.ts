@@ -1,12 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-import { resetState } from "./helpers";
-
-test.beforeEach(async ({ request }) => {
-  await resetState(request);
-});
+import { API, registerUser } from "./helpers";
 
 test("建立已成立的提醒會立即觸發並出現站內通知", async ({ page }) => {
+  await registerUser(page.request);
   await page.goto("/alerts?symbol=2330");
   const form = page.getByTestId("alert-form");
   await expect(form.getByText("目前價格")).toBeVisible();
@@ -19,8 +16,9 @@ test("建立已成立的提醒會立即觸發並出現站內通知", async ({ pa
   await expect(page.getByTestId("alert-events")).toContainText("台積電");
 });
 
-test("提醒可以停用與刪除", async ({ page, request }) => {
-  await request.post("http://localhost:8001/api/alerts", { data: { symbol: "2330", condition: "PRICE_LTE", target_price: 1 } });
+test("提醒可以停用與刪除", async ({ page }) => {
+  await registerUser(page.request);
+  await page.request.post(`${API}/api/alerts`, { data: { symbol: "2330", condition: "PRICE_LTE", target_price: 1 } });
   await page.goto("/alerts");
   const row = page.getByTestId("alerts-table").locator("tbody tr").first();
   await expect(row).toContainText("監控中");

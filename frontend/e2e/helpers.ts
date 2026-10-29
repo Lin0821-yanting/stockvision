@@ -1,15 +1,26 @@
 import type { APIRequestContext, Page } from "@playwright/test";
 
 export const API = "http://localhost:8001";
+export const PASSWORD = "e2e-password-42";
 
-/** 每個測試開始前把 E2E 資料庫整理成乾淨狀態（透過 Python API，不直接刪檔案） */
-export async function resetState(request: APIRequestContext) {
-  await request.post(`${API}/api/account/reset`);
-  const watchlist = await (await request.get(`${API}/api/watchlist?with_quotes=false`)).json();
-  for (const item of watchlist.items) await request.delete(`${API}/api/watchlist/${item.symbol}`);
-  const alerts = await (await request.get(`${API}/api/alerts`)).json();
-  for (const alert of alerts.alerts) await request.delete(`${API}/api/alerts/${alert.id}`);
-  await request.post(`${API}/api/notifications/read-all`);
+let sequence = 0;
+
+/** 每次執行都不重複的帳號（E2E 資料庫會保留上一次執行的使用者） */
+export function uniqueUsername(prefix = "e2e"): string {
+  sequence += 1;
+  return `${prefix}_${Date.now().toString(36)}${sequence}${Math.random().toString(36).slice(2, 5)}`;
+}
+
+/**
+ * 透過 Python API 註冊新帳號。傳入 page.request 時 cookie 和瀏覽器共用，之後開的頁面就是已登入狀態；
+ * 每個測試都用自己的新帳號，資料天生互相隔離，不需要再清空資料庫。
+ */
+export async function registerUser(request: APIRequestContext, username = uniqueUsername(), displayName = username) {
+  const response = await request.post(`${API}/api/auth/register`, {
+    data: { username, password: PASSWORD, display_name: displayName },
+  });
+  if (!response.ok()) throw new Error(`註冊測試帳號失敗：HTTP ${response.status()} ${await response.text()}`);
+  return { username, password: PASSWORD, displayName };
 }
 
 export async function noHorizontalOverflow(page: Page) {

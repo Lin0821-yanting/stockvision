@@ -2,11 +2,13 @@ import { expect, test } from "@playwright/test";
 
 const PAGES = [
   { path: "/", heading: "投資總覽" },
+  { path: "/overview", heading: "大盤總覽" },
   { path: "/market", heading: "股票看盤" },
   { path: "/compare", heading: "股票比較" },
   { path: "/trading", heading: "模擬下單" },
   { path: "/portfolio", heading: "投資組合" },
   { path: "/alerts", heading: "價格提醒" },
+  { path: "/login", heading: "登入 StockVision" },
 ];
 
 test.describe("主要頁面", () => {
