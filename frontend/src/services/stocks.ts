@@ -1,4 +1,5 @@
 import type {
+  CompareResponse,
   FxRate,
   HistoryResponse,
   Market,
@@ -18,6 +19,8 @@ export const stocksApi = {
   history: (symbol: string, period: Period) =>
     apiRequest<HistoryResponse>(`/api/stocks/${encodeURIComponent(symbol)}/history`, { query: { period } }),
   quotes: (symbols: string[]) => apiRequest<QuotesResponse>("/api/stocks/quotes", { query: { symbols: symbols.join(",") } }),
+  compare: (symbols: string[], period: Period) =>
+    apiRequest<CompareResponse>("/api/stocks/compare", { query: { symbols: symbols.join(","), period } }),
 };
 
 export const marketApi = {

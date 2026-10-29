@@ -20,7 +20,8 @@ from app.schemas.stock import (
     StockInfoOut,
     StockSearchOut,
 )
-from app.services import alert_service, catalog_service, history_service, quote_service
+from app.schemas.compare import CompareOut
+from app.services import alert_service, catalog_service, compare_service, history_service, quote_service
 from app.services.entities import StockEntry
 
 router = APIRouter(prefix="/api/stocks", tags=["股票資料"])
@@ -45,7 +46,7 @@ def split_symbols(symbols: str, *, limit: int = MAX_BATCH_SYMBOLS) -> list[str]:
     if not raw:
         raise InvalidRequestError("請至少提供一個股票代號")
     if len(raw) > limit:
-        raise InvalidRequestError(f"一次最多查詢 {limit} 檔股票")
+        raise InvalidRequestError(f"一次最多 {limit} 檔股票", details={"count": len(raw), "limit": limit})
     return raw
 
 
@@ -97,6 +98,24 @@ async def get_quotes(
     # 取得新行情時同步檢查價格提醒
     triggered = await alert_service.process_quotes(db, quotes)
     return QuotesOut(quotes=quotes, errors=errors, triggered_alerts=triggered)
+
+
+# 注意：/compare 必須宣告在 /{symbol} 之前，否則 "compare" 會被當成股票代號
+@router.get(
+    "/compare",
+    response_model=CompareOut,
+    summary="多股比較：標準化走勢與區間報酬（Pandas 計算）",
+    responses=ERROR_RESPONSES,
+)
+async def compare_stocks(
+    symbols: Annotated[str, Query(description="2 到 4 檔，以逗號分隔，例如 2330,2317,AAPL", examples=["2330,2317"])],
+    period: Annotated[Period, Query(description="1M、3M、6M 或 1Y")] = "3M",
+    db: Session = Depends(get_db),
+) -> CompareOut:
+    raw = split_symbols(symbols, limit=compare_service.MAX_SYMBOLS)
+    entries = [await catalog_service.resolve(db, symbol) for symbol in raw]
+    unique = list({entry.key: entry for entry in entries}.values())  # 2330 與 2330.TW 視為同一檔
+    return await compare_service.compare(db, unique, period)
 
 
 @router.get("/{symbol}", response_model=StockDetailOut, summary="個股資訊與最新報價", responses=ERROR_RESPONSES)

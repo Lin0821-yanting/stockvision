@@ -1,10 +1,11 @@
-"""Pandas 數據分析：歷史資料清理、漲跌幅、區間報酬、20 日新低。
+"""Pandas 數據分析：歷史資料清理、漲跌幅、區間報酬、20 日新低、多股標準化比較。
 
 這裡的函式都是純函式（不呼叫網路也不碰資料庫），方便單元測試。
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
@@ -127,6 +128,54 @@ def recent_low(frame: pd.DataFrame, window: int = 20, exclude_date: date | None 
     if len(data) < window:
         return None
     return float(data["close"].iloc[-window:].min())
+
+
+@dataclass(frozen=True)
+class NormalizedComparison:
+    closes: pd.DataFrame  # index：共同交易日；欄：股票代號；值：收盤價
+    normalized: pd.DataFrame  # 同上，值：以共同起始日 = 100 的指數
+    common_start: date
+    common_end: date
+    cumulative_return_pct: dict[str, float]
+    max_drawdown_pct: dict[str, float]
+    data_points: dict[str, int]  # 各股在期間內原本的交易日數
+    excluded_dates: dict[str, int]  # 各股因其他股票沒有交易而被排除的日數
+
+
+def normalize_prices(frames: dict[str, pd.DataFrame], months: int) -> NormalizedComparison:
+    """多檔股票標準化比較。
+
+    1. 以所有股票最晚的交易日為期末，往前取 months 個月
+    2. 只保留「每一檔都有交易」的日期（inner join），不同日期的股價不會互相比較
+    3. 共同起始日的收盤價 = 100：指數 = 當日收盤 ÷ 共同起始日收盤 × 100
+    """
+    if len(frames) < 2:
+        raise ValueError("至少需要兩檔股票才能比較")
+    if any(frame.empty for frame in frames.values()):
+        raise ValueError("有股票沒有歷史資料")
+
+    end = max(frame["date"].iloc[-1] for frame in frames.values())
+    start = end - pd.DateOffset(months=months)
+    closes_by_symbol = {
+        symbol: frame.loc[frame["date"] >= start].set_index("date")["close"] for symbol, frame in frames.items()
+    }
+    closes = pd.concat(closes_by_symbol, axis=1, join="inner").sort_index()
+    if len(closes) < 2:
+        raise ValueError("所選股票在這段期間的共同交易日不足兩天，無法比較")
+
+    base = closes.iloc[0]
+    normalized = closes.div(base).mul(100)
+    drawdown = (normalized / normalized.cummax() - 1) * 100
+    return NormalizedComparison(
+        closes=closes,
+        normalized=normalized,
+        common_start=closes.index[0].date(),
+        common_end=closes.index[-1].date(),
+        cumulative_return_pct={symbol: round(float(normalized[symbol].iloc[-1] - 100), 2) for symbol in closes.columns},
+        max_drawdown_pct={symbol: round(float(drawdown[symbol].min()), 2) for symbol in closes.columns},
+        data_points={symbol: int(len(series)) for symbol, series in closes_by_symbol.items()},
+        excluded_dates={symbol: int(len(series) - len(closes)) for symbol, series in closes_by_symbol.items()},
+    )
 
 
 def to_bar_records(frame: pd.DataFrame) -> list[dict[str, Any]]:

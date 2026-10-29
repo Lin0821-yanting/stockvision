@@ -43,6 +43,16 @@ export function useQuotes(symbols: string[]) {
   return useSWR(key, () => stocksApi.quotes(symbols), { refreshInterval, keepPreviousData: true, onSuccess });
 }
 
+export function useCompare(symbols: string[], period: Period) {
+  const onSuccess = useAlertTriggerHandler();
+  const key = symbols.length >= 2 ? ["compare", period, ...symbols] : null;
+  return useSWR(key, () => stocksApi.compare(symbols, period), {
+    keepPreviousData: true,
+    revalidateOnFocus: false,
+    onSuccess,
+  });
+}
+
 export function useUsdTwd() {
   return useSWR("fx-usd-twd", () => marketApi.usdTwd(), { refreshInterval: 30 * 60_000 });
 }

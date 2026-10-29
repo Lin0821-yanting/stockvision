@@ -110,6 +110,47 @@ export interface HistoryResponse {
   stats: HistoryStats;
 }
 
+export interface ComparePoint {
+  date: string;
+  values: Record<string, number>;
+  closes: Record<string, number>;
+}
+
+export interface CompareStock {
+  symbol: string;
+  market: Market;
+  name: string;
+  exchange: string;
+  currency: Currency;
+  latest_price: number | null;
+  day_change_pct: number | null;
+  volume: number | null;
+  quote_kind: QuoteKind | null;
+  quote_source: string | null;
+  quote_as_of: string | null;
+  start_close: number;
+  end_close: number;
+  cumulative_return_pct: number;
+  max_drawdown_pct: number;
+  data_points: number;
+  excluded_dates: number;
+}
+
+export interface CompareResponse {
+  period: Period;
+  symbols: string[];
+  common_start: string;
+  common_end: string;
+  aligned_points: number;
+  method: string;
+  computed_by: string;
+  stocks: CompareStock[];
+  series: ComparePoint[];
+  errors: QuoteError[];
+  triggered_alerts: AlertEvent[];
+  fetched_at: string;
+}
+
 export interface MarketSession {
   market: Market;
   name: string;

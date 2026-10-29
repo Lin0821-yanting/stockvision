@@ -1,15 +1,15 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
-import { ComingSoon } from "@/components/common/coming-soon";
-import { PageHeader } from "@/components/common/page-header";
+import { CardSkeleton } from "@/components/common/states";
+import { CompareView } from "@/components/compare/compare-view";
 
 export const metadata: Metadata = { title: "股票比較" };
 
 export default function ComparePage() {
   return (
-    <>
-      <PageHeader title="股票比較" description="選擇 2 至 4 檔股票，比較標準化走勢與區間報酬" />
-      <ComingSoon feature="股票比較" />
-    </>
+    <Suspense fallback={<CardSkeleton rows={6} />}>
+      <CompareView />
+    </Suspense>
   );
 }
