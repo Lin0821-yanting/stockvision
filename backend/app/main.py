@@ -16,10 +16,11 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
-from app.api.routes import system
+from app.api.routes import market, stocks, system
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.database.session import init_db
+from app.services.providers.http import close_client
 
 logger = logging.getLogger("stockvision")
 
@@ -36,6 +37,7 @@ StockVision 台美股智慧看盤與模擬投資平台的 Python 後端。
 async def lifespan(_: FastAPI):
     init_db()
     yield
+    await close_client()
 
 
 def _error(status_code: int, code: str, message: str, details: dict | None = None) -> JSONResponse:
@@ -95,6 +97,8 @@ def create_app() -> FastAPI:
     )
     register_exception_handlers(app)
     app.include_router(system.router)
+    app.include_router(market.router)
+    app.include_router(stocks.router)
     return app
 
 
