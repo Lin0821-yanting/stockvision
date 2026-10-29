@@ -10,6 +10,22 @@ def test_health_reports_data_sources(client):
     assert finnhub["configured"] is False
 
 
+def test_health_reports_alert_monitor(client):
+    monitor = client.get("/api/health").json()["alert_monitor"]
+
+    assert monitor["enabled"] is False  # 測試環境關閉排程
+    assert monitor["interval_seconds"] >= 15
+
+
+def test_relative_sqlite_path_is_resolved_from_backend_folder():
+    from app.core.config import BACKEND_DIR, Settings
+
+    settings = Settings(database_url="sqlite:///./data/demo.db")
+
+    assert settings.resolved_database_url == "sqlite:///" + (BACKEND_DIR / "data" / "demo.db").resolve().as_posix()
+    assert Settings(database_url="sqlite:///:memory:").resolved_database_url == "sqlite:///:memory:"
+
+
 def test_unknown_route_uses_error_format(client):
     response = client.get("/api/does-not-exist")
 

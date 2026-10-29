@@ -19,7 +19,7 @@ import { useHistory, useStockDetail } from "@/hooks/use-market";
 import { formatDate, formatPercent, formatPrice, formatVolume, toneOf, TONE_ARROW, TONE_TEXT_CLASS } from "@/lib/format";
 import { POPULAR_SYMBOLS } from "@/lib/market";
 import { cn } from "@/lib/utils";
-import { errorMessage } from "@/services/api-client";
+import { ApiError, errorMessage } from "@/services/api-client";
 import type { Period } from "@/types/api";
 
 const PERIODS: { value: Period; label: string }[] = [
@@ -152,6 +152,9 @@ export function MarketView() {
   const searchParams = useSearchParams();
   const symbol = searchParams.get("symbol")?.trim().toUpperCase() || null;
   const select = (value: string) => router.push(`/market?symbol=${encodeURIComponent(value)}`);
+  // 代號不存在時只顯示一次錯誤，不再載入歷史走勢（SWR 會共用 StockOverview 的同一個請求）
+  const detail = useStockDetail(symbol);
+  const notFound = detail.error instanceof ApiError && detail.error.status === 404;
 
   return (
     <>
@@ -166,7 +169,7 @@ export function MarketView() {
           {symbol ? (
             <>
               <StockOverview key={symbol} symbol={symbol} />
-              <HistorySection key={`history-${symbol}`} symbol={symbol} />
+              {notFound ? null : <HistorySection key={`history-${symbol}`} symbol={symbol} />}
             </>
           ) : (
             <Welcome onPick={select} />
