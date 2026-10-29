@@ -1,0 +1,9 @@
+fastapi~=0.162
+uvicorn[standard]~=0.54
+pydantic~=2.14
+pydantic-settings~=2.16
+sqlalchemy~=2.1
+pandas~=3.1
+httpx~=0.28
+apscheduler~=3.11
+tzdata>=2025.2

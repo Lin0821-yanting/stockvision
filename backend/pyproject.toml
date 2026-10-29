@@ -1,0 +1,14 @@
+[project]
+name = "stockvision-backend"
+version = "0.1.0"
+description = "StockVision 台美股看盤與模擬投資平台 — FastAPI 後端"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+filterwarnings = [
+    # Starlette 建議改用 httpx2；目前的 TestClient 仍可正常運作
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]
