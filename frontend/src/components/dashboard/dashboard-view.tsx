@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BellRing, GitCompareArrows } from "lucide-react";
+import { ArrowLeftRight, ArrowRight, BellRing, ChartCandlestick, GitCompareArrows, Star } from "lucide-react";
 
+import { LoginButtons } from "@/components/auth/login-prompt";
 import { PageHeader } from "@/components/common/page-header";
 import { StatCard } from "@/components/common/stat-card";
-import { EmptyState, ErrorState, TableSkeleton } from "@/components/common/states";
+import { CardSkeleton, EmptyState, ErrorState, TableSkeleton } from "@/components/common/states";
 import { MarketStatusPills } from "@/components/layout/market-status-pills";
 import { AllocationBar } from "@/components/portfolio/allocation-bar";
 import { QuoteKindBadge } from "@/components/stock/data-source-badge";
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAlerts } from "@/hooks/use-alerts";
+import { useAuth } from "@/hooks/use-auth";
 import { usePortfolio, useTrades } from "@/hooks/use-trading";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import {
@@ -29,6 +31,7 @@ import {
   TONE_ARROW,
   TONE_TEXT_CLASS,
 } from "@/lib/format";
+import { POPULAR_SYMBOLS } from "@/lib/market";
 import { cn } from "@/lib/utils";
 
 import { ChangeBarChart } from "./change-bar-chart";
@@ -252,25 +255,111 @@ function CompareShortcut() {
   );
 }
 
+const MEMBER_FEATURES = [
+  { icon: ArrowLeftRight, title: "模擬下單", text: "NT$1,000,000 模擬資金，台股、美股都能買賣，自動換算台幣與手續費" },
+  { icon: Star, title: "自選股", text: "追蹤關心的股票，交易時段每 10 秒更新報價" },
+  { icon: BellRing, title: "價格提醒", text: "到價或創 20 日新低時發出站內通知，背景排程持續監控" },
+];
+
+function GuestWelcome() {
+  return (
+    <Card className="gap-5" data-testid="guest-welcome">
+      <CardHeader>
+        <CardTitle className="text-xl">登入後開始模擬投資</CardTitle>
+        <CardDescription>每個帳號的模擬帳戶、自選股、交易紀錄與價格提醒都各自獨立保存。</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <ul className="grid gap-3 sm:grid-cols-3">
+          {MEMBER_FEATURES.map((feature) => (
+            <li key={feature.title} className="rounded-lg bg-muted/40 p-3">
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <feature.icon className="size-4 text-primary" aria-hidden />
+                {feature.title}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{feature.text}</p>
+            </li>
+          ))}
+        </ul>
+        <LoginButtons size="default" className="justify-start" />
+      </CardContent>
+    </Card>
+  );
+}
+
+function PopularStocks() {
+  return (
+    <Card className="min-w-0 gap-4">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <ChartCandlestick className="size-4 text-primary" aria-hidden />
+          熱門股票
+        </CardTitle>
+        <CardDescription>不用登入也能查看盤中報價與歷史走勢</CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {POPULAR_SYMBOLS.map((item) => (
+          <Button key={item.symbol} asChild variant="outline" size="sm">
+            <Link href={`/market?symbol=${item.symbol}`}>
+              <span className="font-mono">{item.symbol}</span>
+              <span className="text-muted-foreground">{item.name}</span>
+            </Link>
+          </Button>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
+function MemberDashboard() {
+  return (
+    <div className="space-y-6">
+      <AccountOverview />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <WatchlistCard />
+        <WatchlistMovers />
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <RecentTrades />
+        <ActiveAlerts />
+      </div>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <AllocationCard />
+        <CompareShortcut />
+      </div>
+    </div>
+  );
+}
+
+function GuestDashboard() {
+  return (
+    <div className="space-y-6">
+      <GuestWelcome />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <PopularStocks />
+        <CompareShortcut />
+      </div>
+    </div>
+  );
+}
+
 export function DashboardView() {
+  const { user, isLoading, error, retry } = useAuth();
   return (
     <>
-      <PageHeader title="投資總覽" description="自選股行情、模擬投資組合與價格提醒" actions={<MarketStatusPills />} />
-      <div className="space-y-6">
-        <AccountOverview />
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
-          <WatchlistCard />
-          <WatchlistMovers />
-        </div>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <RecentTrades />
-          <ActiveAlerts />
-        </div>
-        <div className="grid gap-6 lg:grid-cols-2">
-          <AllocationCard />
-          <CompareShortcut />
-        </div>
-      </div>
+      <PageHeader
+        title="投資總覽"
+        description={user ? `${user.display_name} 的自選股行情、模擬投資組合與價格提醒` : "自選股行情、模擬投資組合與價格提醒"}
+        actions={<MarketStatusPills />}
+      />
+      {user ? (
+        <MemberDashboard />
+      ) : isLoading ? (
+        <CardSkeleton rows={6} />
+      ) : error ? (
+        <ErrorState error={error} title="無法確認登入狀態" onRetry={retry} />
+      ) : (
+        <GuestDashboard />
+      )}
     </>
   );
 }

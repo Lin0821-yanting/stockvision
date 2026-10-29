@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Lock } from "lucide-react";
 
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 import { NAV_ITEMS, isActivePath } from "./nav-items";
@@ -32,6 +34,8 @@ export function Brand() {
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { user, isLoading } = useAuth();
+  const locked = !user && !isLoading;
 
   return (
     <nav className="flex flex-col gap-1" aria-label="主要導覽">
@@ -53,6 +57,12 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           >
             <Icon className={cn("size-4", active && "text-primary")} />
             <span className="font-medium">{item.label}</span>
+            {locked && item.requiresAuth ? (
+              <>
+                <Lock className="size-3.5 text-muted-foreground/70" aria-hidden />
+                <span className="sr-only">（需要登入）</span>
+              </>
+            ) : null}
             <span className="ml-auto text-xs text-muted-foreground/70">{item.description}</span>
           </Link>
         );

@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { Star } from "lucide-react";
 
+import { LoginPrompt } from "@/components/auth/login-prompt";
 import { EmptyState, ErrorState, TableSkeleton } from "@/components/common/states";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/hooks/use-auth";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatPrice } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -14,16 +16,21 @@ import { PriceChange } from "./price-change";
 
 /** 精簡版自選股清單（看盤頁側欄），點選即可切換股票 */
 export function WatchlistPanel({ activeSymbol }: { activeSymbol?: string | null }) {
+  const auth = useAuth();
   const { data, error, isLoading, mutate } = useWatchlist();
 
   return (
     <Card className="gap-4">
       <CardHeader>
         <CardTitle>我的自選股</CardTitle>
-        <CardDescription>資料保存在本機 SQLite，盤中每 10 秒更新</CardDescription>
+        <CardDescription>每個帳號各自保存，盤中每 10 秒更新</CardDescription>
       </CardHeader>
       <CardContent>
-        {error && !data ? (
+        {auth.isLoading ? (
+          <TableSkeleton rows={4} />
+        ) : !auth.user ? (
+          <LoginPrompt icon={Star} title="登入後即可使用自選股" description="加入自選的股票會保存在你的帳號中" className="p-6" />
+        ) : error && !data ? (
           <ErrorState error={error} onRetry={() => mutate()} />
         ) : isLoading && !data ? (
           <TableSkeleton rows={4} />

@@ -27,3 +27,9 @@ ERROR_RESPONSES: dict[int | str, dict[str, Any]] = {
     422: {"model": ErrorResponse, "description": "輸入資料格式不正確"},
     503: {"model": ErrorResponse, "description": "外部股票 API 暫時無法取得資料"},
 }
+
+# 需要登入的端點：未登入或 session 過期時回 401
+AUTH_REQUIRED_RESPONSES: dict[int | str, dict[str, Any]] = {
+    **ERROR_RESPONSES,
+    401: {"model": ErrorResponse, "description": "尚未登入或登入已過期（AUTH_REQUIRED）"},
+}

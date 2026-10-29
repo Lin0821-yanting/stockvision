@@ -270,7 +270,11 @@ export function TradeForm({ symbol, onSymbolChange }: { symbol: string | null; o
           </p>
         </section>
 
-        <PreviewPanel preview={previewData} loading={preview.isValidating || !previewMatches} error={preview.error} />
+        <PreviewPanel
+          preview={previewData}
+          loading={Boolean(previewKey) && (preview.isValidating || !previewMatches)}
+          error={preview.error}
+        />
 
         <Button
           size="lg"

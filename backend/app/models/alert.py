@@ -16,6 +16,7 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     market: Mapped[str] = mapped_column(String(4))
     symbol: Mapped[str] = mapped_column(String(16))
     name: Mapped[str] = mapped_column(String(200))
@@ -42,6 +43,7 @@ class AlertEvent(Base):
     __tablename__ = "alert_events"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True)
     alert_id: Mapped[int | None] = mapped_column(ForeignKey("alerts.id", ondelete="SET NULL"), nullable=True)
     market: Mapped[str] = mapped_column(String(4))
     symbol: Mapped[str] = mapped_column(String(16))

@@ -12,6 +12,7 @@ from app.core import clock
 from app.core.errors import AppError
 from app.core.money import quantize_money
 from app.models.account import Position, Trade
+from app.models.user import User
 from app.schemas.market import FxRateOut
 from app.schemas.trading import PortfolioOut, PositionOut
 from app.services import fx_service, quote_service
@@ -30,8 +31,8 @@ def _realized_by_symbol(db: Session, account_id: int, cycle: int) -> dict[tuple[
     return totals
 
 
-async def get_portfolio(db: Session) -> PortfolioOut:
-    account = get_account(db)
+async def get_portfolio(db: Session, user: User) -> PortfolioOut:
+    account = get_account(db, user)
     positions = list(db.scalars(select(Position).where(Position.account_id == account.id).order_by(Position.id)))
     entries = [StockEntry(p.market, p.symbol, p.name, p.exchange) for p in positions]
     results = {r.entry.key: r for r in await quote_service.get_quotes(entries)} if entries else {}

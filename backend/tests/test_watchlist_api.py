@@ -8,6 +8,12 @@ from tests.factories import mis_item, tw_price_rows, us_price_rows
 
 
 @pytest.fixture
+def client(auth_client):
+    """這個檔案的 API 都需要登入：預設使用已登入的 client。"""
+    return auth_client
+
+
+@pytest.fixture
 def market_data(upstream):
     upstream.finmind[("TaiwanStockPrice", "2330")] = tw_price_rows("2330", [2400.0] * 25)
     upstream.finmind[("USStockPrice", "AAPL")] = us_price_rows("AAPL", [340.0, 343.83])

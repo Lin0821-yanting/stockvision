@@ -1,6 +1,14 @@
 import type { ApiErrorBody } from "@/types/api";
 
-export const API_BASE_URL = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
+function resolveBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_BASE_URL;
+  if (configured) return configured.replace(/\/$/, "");
+  // 沒有設定時沿用目前網頁的主機名稱：localhost 與 127.0.0.1 不會混用，登入 cookie 才送得出去
+  if (typeof window !== "undefined") return `${window.location.protocol}//${window.location.hostname}:8000`;
+  return "http://localhost:8000";
+}
+
+export const API_BASE_URL = resolveBaseUrl();
 
 export class ApiError extends Error {
   readonly status: number;
@@ -55,6 +63,7 @@ export async function apiRequest<T>(path: string, { json, query, headers, ...ini
       },
       body: json !== undefined ? JSON.stringify(json) : undefined,
       cache: "no-store",
+      credentials: "include", // 帶上 HttpOnly session cookie
     });
   } catch {
     throw new ApiError({

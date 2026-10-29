@@ -14,6 +14,12 @@ CLOSES = [2500.0 - i * 5 for i in range(25)]  # 前 20 日最低收盤 2380
 
 
 @pytest.fixture
+def client(auth_client):
+    """這個檔案的 API 都需要登入：預設使用已登入的 client。"""
+    return auth_client
+
+
+@pytest.fixture
 def market_data(upstream):
     upstream.finmind[("TaiwanStockPrice", "2330")] = tw_price_rows("2330", CLOSES)
     set_price(upstream, "2415.0000")

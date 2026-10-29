@@ -3,6 +3,7 @@
 from app.models.account import Account, Position, Trade
 from app.models.alert import Alert, AlertEvent
 from app.models.catalog import StockCatalog
+from app.models.user import User, UserSession
 from app.models.watchlist import WatchlistItem
 
-__all__ = ["Account", "Alert", "AlertEvent", "Position", "StockCatalog", "Trade", "WatchlistItem"]
+__all__ = ["Account", "Alert", "AlertEvent", "Position", "StockCatalog", "Trade", "User", "UserSession", "WatchlistItem"]

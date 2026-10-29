@@ -19,6 +19,7 @@ from app.core import clock
 from app.core.errors import InvalidRequestError, NotFoundError
 from app.core.market_hours import session_for
 from app.models.alert import Alert, AlertEvent
+from app.models.user import User
 from app.schemas.alert import AlertCreate, AlertEventOut, AlertOut, AlertUpdate
 from app.schemas.stock import QuoteOut
 from app.services import alert_logic, history_service, quote_service
@@ -106,20 +107,28 @@ def _message(alert: Alert, quote: QuoteOut, low_20d: Decimal | None) -> str:
 # ---------------------------------------------------------------- CRUD
 
 
-def list_alerts(db: Session) -> list[Alert]:
-    return list(db.scalars(select(Alert).order_by(Alert.is_active.desc(), Alert.created_at.desc(), Alert.id.desc())))
+def list_alerts(db: Session, user: User) -> list[Alert]:
+    return list(
+        db.scalars(
+            select(Alert)
+            .where(Alert.user_id == user.id)
+            .order_by(Alert.is_active.desc(), Alert.created_at.desc(), Alert.id.desc())
+        )
+    )
 
 
-def get_alert(db: Session, alert_id: int) -> Alert:
+def get_alert(db: Session, user: User, alert_id: int) -> Alert:
+    """別人的提醒一律當作不存在（404），不透露編號是否存在。"""
     alert = db.get(Alert, alert_id)
-    if alert is None:
+    if alert is None or alert.user_id != user.id:
         raise NotFoundError(f"找不到編號 {alert_id} 的提醒", details={"alert_id": alert_id})
     return alert
 
 
-def create_alert(db: Session, entry: StockEntry, payload: AlertCreate) -> Alert:
+def create_alert(db: Session, user: User, entry: StockEntry, payload: AlertCreate) -> Alert:
     now = clock.now()
     alert = Alert(
+        user_id=user.id,
         market=entry.market,
         symbol=entry.symbol,
         name=entry.name,
@@ -178,8 +187,16 @@ def delete_alert(db: Session, alert: Alert) -> None:
 # ---------------------------------------------------------------- 檢查
 
 
-async def process_quotes(db: Session, quotes: list[QuoteOut]) -> list[AlertEventOut]:
-    """用剛取得的報價檢查相關的啟用中提醒，回傳這次新觸發的通知。"""
+async def process_quotes(db: Session, quotes: list[QuoteOut], user: User | None) -> list[AlertEventOut]:
+    """用剛取得的報價檢查「所有使用者」的相關提醒，但只回傳目前使用者自己的新通知。"""
+    events = await evaluate_quotes(db, quotes)
+    if user is None:
+        return []
+    return [event_out(event) for event in events if event.user_id == user.id]
+
+
+async def evaluate_quotes(db: Session, quotes: list[QuoteOut]) -> list[AlertEvent]:
+    """伺服器端持續監控：任何人取得行情、或背景排程執行時，都會檢查這些股票的所有啟用中提醒。"""
     priced = {(quote.market, quote.symbol): quote for quote in quotes if quote.price is not None}
     if not priced:
         return []
@@ -217,6 +234,7 @@ async def process_quotes(db: Session, quotes: list[QuoteOut]) -> list[AlertEvent
         alert.last_condition_met = result.condition_met
         if result.triggered:
             event = AlertEvent(
+                user_id=alert.user_id,
                 alert_id=alert.id,
                 market=alert.market,
                 symbol=alert.symbol,
@@ -240,7 +258,7 @@ async def process_quotes(db: Session, quotes: list[QuoteOut]) -> list[AlertEvent
     db.commit()
     for event in events:
         db.refresh(event)
-    return [event_out(event) for event in events]
+    return events
 
 
 @dataclass
@@ -252,11 +270,23 @@ class CheckResult:
     checked_at: datetime | None = None
 
 
-async def check_active_alerts(db: Session, markets: set[str] | None = None, alert_ids: set[int] | None = None) -> CheckResult:
-    """抓取啟用中提醒的最新報價並檢查；markets 用來讓排程只檢查開盤中的市場。"""
+async def check_active_alerts(
+    db: Session,
+    markets: set[str] | None = None,
+    alert_ids: set[int] | None = None,
+    user: User | None = None,
+) -> CheckResult:
+    """抓取啟用中提醒的最新報價並檢查。
+
+    排程呼叫時 user 為 None，檢查所有人的提醒；markets 讓排程只檢查開盤中的市場。
+    使用者按「立即檢查」時只檢查、也只回傳自己的提醒。
+    """
+    statement = select(Alert).where(Alert.is_active.is_(True))
+    if user is not None:
+        statement = statement.where(Alert.user_id == user.id)
     alerts = [
         alert
-        for alert in db.scalars(select(Alert).where(Alert.is_active.is_(True)))
+        for alert in db.scalars(statement)
         if (markets is None or alert.market in markets) and (alert_ids is None or alert.id in alert_ids)
     ]
     entries = list({_entry(alert).key: _entry(alert) for alert in alerts}.values())
@@ -265,32 +295,40 @@ async def check_active_alerts(db: Session, markets: set[str] | None = None, aler
         return result
     quote_results = await quote_service.get_quotes(entries)
     result.errors = [f"{r.entry.symbol}：{r.error.message}" for r in quote_results if r.quote is None and r.error]
-    result.events = await process_quotes(db, [r.quote for r in quote_results if r.quote is not None])
+    events = await evaluate_quotes(db, [r.quote for r in quote_results if r.quote is not None])
+    result.events = [event_out(event) for event in events if user is None or event.user_id == user.id]
     return result
 
 
 # ---------------------------------------------------------------- 站內通知
 
 
-def list_notifications(db: Session, unread_only: bool, limit: int) -> tuple[list[AlertEvent], int]:
-    statement = select(AlertEvent)
+def list_notifications(db: Session, user: User, unread_only: bool, limit: int) -> tuple[list[AlertEvent], int]:
+    statement = select(AlertEvent).where(AlertEvent.user_id == user.id)
     if unread_only:
         statement = statement.where(AlertEvent.read_at.is_(None))
     items = list(db.scalars(statement.order_by(AlertEvent.triggered_at.desc(), AlertEvent.id.desc()).limit(limit)))
-    unread = db.scalar(select(func.count()).select_from(AlertEvent).where(AlertEvent.read_at.is_(None))) or 0
+    unread = (
+        db.scalar(
+            select(func.count())
+            .select_from(AlertEvent)
+            .where(AlertEvent.user_id == user.id, AlertEvent.read_at.is_(None))
+        )
+        or 0
+    )
     return items, unread
 
 
-def list_events(db: Session, alert_id: int | None, limit: int) -> list[AlertEvent]:
-    statement = select(AlertEvent)
+def list_events(db: Session, user: User, alert_id: int | None, limit: int) -> list[AlertEvent]:
+    statement = select(AlertEvent).where(AlertEvent.user_id == user.id)
     if alert_id is not None:
         statement = statement.where(AlertEvent.alert_id == alert_id)
     return list(db.scalars(statement.order_by(AlertEvent.triggered_at.desc(), AlertEvent.id.desc()).limit(limit)))
 
 
-def mark_read(db: Session, event_id: int) -> AlertEvent:
+def mark_read(db: Session, user: User, event_id: int) -> AlertEvent:
     event = db.get(AlertEvent, event_id)
-    if event is None:
+    if event is None or event.user_id != user.id:
         raise NotFoundError(f"找不到編號 {event_id} 的通知", details={"event_id": event_id})
     if event.read_at is None:
         event.read_at = clock.now()
@@ -299,7 +337,11 @@ def mark_read(db: Session, event_id: int) -> AlertEvent:
     return event
 
 
-def mark_all_read(db: Session) -> int:
-    result = db.execute(update(AlertEvent).where(AlertEvent.read_at.is_(None)).values(read_at=clock.now()))
+def mark_all_read(db: Session, user: User) -> int:
+    result = db.execute(
+        update(AlertEvent)
+        .where(AlertEvent.user_id == user.id, AlertEvent.read_at.is_(None))
+        .values(read_at=clock.now())
+    )
     db.commit()
     return result.rowcount or 0

@@ -7,8 +7,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.api.deps import get_optional_user
 from app.core.errors import AppError, InvalidRequestError, UpstreamError
 from app.database.session import get_db
+from app.models.user import User
 from app.schemas.common import ERROR_RESPONSES
 from app.schemas.stock import (
     HistoryOut,
@@ -85,6 +87,7 @@ async def search_stocks(
 @router.get("/quotes", response_model=QuotesOut, summary="批次取得最新報價（盤中或收盤）", responses=ERROR_RESPONSES)
 async def get_quotes(
     symbols: Annotated[str, Query(description="以逗號分隔，例如 2330,2317,AAPL", examples=["2330,2317,AAPL"])],
+    user: User | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ) -> QuotesOut:
     entries, errors = await resolve_many(db, split_symbols(symbols))
@@ -95,8 +98,8 @@ async def get_quotes(
         for r in results
         if r.quote is None and r.error is not None
     ]
-    # 取得新行情時同步檢查價格提醒
-    triggered = await alert_service.process_quotes(db, quotes)
+    # 取得新行情時同步檢查價格提醒（檢查所有人的提醒，只回傳自己的通知）
+    triggered = await alert_service.process_quotes(db, quotes, user)
     return QuotesOut(quotes=quotes, errors=errors, triggered_alerts=triggered)
 
 
@@ -110,20 +113,23 @@ async def get_quotes(
 async def compare_stocks(
     symbols: Annotated[str, Query(description="2 到 4 檔，以逗號分隔，例如 2330,2317,AAPL", examples=["2330,2317"])],
     period: Annotated[Period, Query(description="1M、3M、6M 或 1Y")] = "3M",
+    user: User | None = Depends(get_optional_user),
     db: Session = Depends(get_db),
 ) -> CompareOut:
     raw = split_symbols(symbols, limit=compare_service.MAX_SYMBOLS)
     entries = [await catalog_service.resolve(db, symbol) for symbol in raw]
     unique = list({entry.key: entry for entry in entries}.values())  # 2330 與 2330.TW 視為同一檔
-    return await compare_service.compare(db, unique, period)
+    return await compare_service.compare(db, unique, period, user)
 
 
 @router.get("/{symbol}", response_model=StockDetailOut, summary="個股資訊與最新報價", responses=ERROR_RESPONSES)
-async def get_stock(symbol: str, db: Session = Depends(get_db)) -> StockDetailOut:
+async def get_stock(
+    symbol: str, user: User | None = Depends(get_optional_user), db: Session = Depends(get_db)
+) -> StockDetailOut:
     entry = await catalog_service.resolve(db, symbol)
     quote = await quote_service.get_quote(entry)
     low_20d, is_20d_low = await history_service.twenty_day_low(entry, quote)
-    triggered = await alert_service.process_quotes(db, [quote])
+    triggered = await alert_service.process_quotes(db, [quote], user)
     return StockDetailOut(
         stock=stock_info(entry),
         quote=quote,

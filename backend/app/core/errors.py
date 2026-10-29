@@ -43,6 +43,23 @@ class ConflictError(AppError):
     code = "CONFLICT"
 
 
+class AuthenticationError(AppError):
+    """未登入、session 過期或帳號密碼錯誤。"""
+
+    status_code = 401
+    code = "AUTH_REQUIRED"
+
+
+class ForbiddenError(AppError):
+    status_code = 403
+    code = "FORBIDDEN"
+
+
+class TooManyAttemptsError(AppError):
+    status_code = 429
+    code = "TOO_MANY_ATTEMPTS"
+
+
 class InvalidRequestError(AppError):
     status_code = 400
     code = "INVALID_REQUEST"

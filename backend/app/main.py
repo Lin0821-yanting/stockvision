@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
-from app.api.routes import alerts, market, notifications, stocks, system, trading, watchlist
+from app.api.routes import alerts, auth, market, notifications, stocks, system, trading, watchlist
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.database.session import init_db
@@ -31,6 +31,8 @@ StockVision 台美股智慧看盤與模擬投資平台的 Python 後端。
 * 股票資料：FinMind、TWSE OpenAPI、TPEx OpenAPI、TWSE MIS（盤中）、Finnhub（美股盤中，選用）
 * 所有價格都附帶資料來源、資料日期與更新時間；日資料不會被標示成即時報價
 * 模擬交易只是練習用途：**模擬成交，不代表真實市場價格或成交**
+* 自選股、模擬交易、投資組合、價格提醒與通知需要登入：先執行 `POST /api/auth/register` 或
+  `POST /api/auth/login`，瀏覽器會保存 HttpOnly session cookie，之後的 Try it out 就會帶著登入狀態
 """
 
 
@@ -95,11 +97,14 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
+        # 前端（:3000）呼叫後端（:8000）時要帶上 session cookie；來源一律是明確列出的網址
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
     register_exception_handlers(app)
     app.include_router(system.router)
+    app.include_router(auth.router)
     app.include_router(market.router)
     app.include_router(stocks.router)
     app.include_router(watchlist.router)

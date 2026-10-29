@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.core.config import get_settings
+
+logger = logging.getLogger("stockvision.database")
 
 
 class Base(DeclarativeBase):
@@ -62,10 +65,12 @@ def get_db() -> Iterator[Session]:
 
 
 def init_db() -> None:
-    """建立所有資料表並寫入預設資料；重複執行是安全的。"""
+    """升級舊結構（必要時先備份）並建立所有資料表；重複執行是安全的。"""
     from app import models  # noqa: F401  匯入後所有 model 才會註冊到 Base.metadata
-    from app.database.seed import seed_defaults
+    from app.database import migrations
 
+    if migrations.needs_upgrade(engine):
+        backup = migrations.backup_sqlite(get_settings().resolved_database_url)
+        logger.warning("Upgrading single-user database for login support; backup saved to %s", backup)
+    migrations.migrate(engine)
     Base.metadata.create_all(bind=engine)
-    with SessionLocal() as db:
-        seed_defaults(db)

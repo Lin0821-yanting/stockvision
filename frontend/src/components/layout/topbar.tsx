@@ -1,7 +1,9 @@
+import { Suspense } from "react";
+
 import { GlobalSearch } from "./global-search";
 import { MarketStatusPills } from "./market-status-pills";
 import { MobileNav } from "./mobile-nav";
-import { NotificationBell } from "./notification-bell";
+import { UserMenu, UserMenuSkeleton } from "./user-menu";
 
 export function Topbar() {
   return (
@@ -11,7 +13,9 @@ export function Topbar() {
         <GlobalSearch className="max-w-md flex-1" />
         <div className="ml-auto flex items-center gap-2">
           <MarketStatusPills className="hidden md:flex" />
-          <NotificationBell />
+          <Suspense fallback={<UserMenuSkeleton />}>
+            <UserMenu />
+          </Suspense>
         </div>
       </div>
     </header>

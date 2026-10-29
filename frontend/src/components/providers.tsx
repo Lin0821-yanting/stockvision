@@ -1,8 +1,10 @@
 "use client";
 
-import { SWRConfig } from "swr";
+import { mutate, SWRConfig } from "swr";
 
+import { SessionBoundary } from "@/components/auth/session-boundary";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AUTH_KEY } from "@/hooks/use-auth";
 import { ApiError } from "@/services/api-client";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -16,9 +18,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
           if (retryCount >= 2) return;
           setTimeout(() => revalidate({ retryCount }), 4000);
         },
+        // 登入逾期或在其他分頁登出：重新確認登入狀態，畫面會改成登入提示
+        onError: (error, key) => {
+          if (error instanceof ApiError && error.status === 401 && key !== AUTH_KEY) void mutate(AUTH_KEY);
+        },
       }}
     >
-      <TooltipProvider>{children}</TooltipProvider>
+      <TooltipProvider>
+        <SessionBoundary>{children}</SessionBoundary>
+      </TooltipProvider>
     </SWRConfig>
   );
 }

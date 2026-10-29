@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     alert_check_interval_seconds: int = Field(default=60, ge=15, le=3600)
     http_timeout_seconds: float = Field(default=10.0, gt=0)
 
+    # 登入：伺服器端 session，token 放在 HttpOnly cookie
+    session_cookie_name: str = "sv_session"
+    session_days: int = Field(default=7, ge=1, le=90)
+    session_cookie_secure: bool = False  # 部署到 HTTPS 時改成 true
+    registration_enabled: bool = True
+
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]

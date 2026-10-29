@@ -10,9 +10,10 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core import clock
+from app.core.config import get_settings
 from app.core.errors import BusinessRuleError, PriceUnavailableError
-from app.database.seed import ACCOUNT_ID, seed_defaults
 from app.models.account import Account, Position, Trade
+from app.models.user import User
 from app.schemas.market import FxRateOut
 from app.schemas.stock import QuoteOut
 from app.schemas.trading import AccountOut, TradeOut, TradePreviewOut, TradeRequest
@@ -33,11 +34,24 @@ class PricedOrder:
         return self.fx.rate if self.fx is not None else ONE
 
 
-def get_account(db: Session) -> Account:
-    account = db.get(Account, ACCOUNT_ID)
+def get_account(db: Session, user: User) -> Account:
+    """使用者的模擬帳戶；第一次使用時建立 NT$1,000,000 帳戶。"""
+    account = db.scalar(select(Account).where(Account.user_id == user.id))
     if account is None:
-        seed_defaults(db)
-        account = db.get(Account, ACCOUNT_ID)
+        initial = get_settings().initial_cash
+        now = clock.now()
+        account = Account(
+            user_id=user.id,
+            base_currency="TWD",
+            initial_cash=initial,
+            cash=initial,
+            cycle=1,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(account)
+        db.commit()
+        db.refresh(account)
     return account
 
 
@@ -84,9 +98,9 @@ def _fill(side: str, account: Account, position: Position | None, shares: int, o
     return apply(account.cash, to_holding(position), shares, order.price, order.fx_rate)
 
 
-async def preview_trade(db: Session, request: TradeRequest) -> TradePreviewOut:
+async def preview_trade(db: Session, user: User, request: TradeRequest) -> TradePreviewOut:
     order = await price_order(db, request.symbol)
-    account = get_account(db)
+    account = get_account(db, user)
     position = find_position(db, account, order.entry.market, order.entry.symbol)
     held = position.shares if position else 0
     common = {
@@ -134,11 +148,11 @@ async def preview_trade(db: Session, request: TradeRequest) -> TradePreviewOut:
     )
 
 
-async def execute_trade(db: Session, request: TradeRequest) -> Trade:
+async def execute_trade(db: Session, user: User, request: TradeRequest) -> Trade:
     order = await price_order(db, request.symbol)
     entry = order.entry
     # 取得價格之後才讀帳戶，計算與寫入之間沒有任何 await，不會被其他請求插隊
-    account = get_account(db)
+    account = get_account(db, user)
     position = find_position(db, account, entry.market, entry.symbol)
     fill = _fill(request.side, account, position, request.shares, order)
     now = clock.now()
@@ -204,8 +218,10 @@ async def execute_trade(db: Session, request: TradeRequest) -> Trade:
     return trade
 
 
-def list_trades(db: Session, scope: Literal["current", "all"] = "current", limit: int = 100) -> tuple[Account, list[Trade]]:
-    account = get_account(db)
+def list_trades(
+    db: Session, user: User, scope: Literal["current", "all"] = "current", limit: int = 100
+) -> tuple[Account, list[Trade]]:
+    account = get_account(db, user)
     statement = select(Trade).where(Trade.account_id == account.id)
     if scope == "current":
         statement = statement.where(Trade.cycle == account.cycle)
@@ -213,9 +229,9 @@ def list_trades(db: Session, scope: Literal["current", "all"] = "current", limit
     return account, list(db.scalars(statement))
 
 
-def reset_account(db: Session) -> Account:
+def reset_account(db: Session, user: User) -> Account:
     """清空持股、現金回到初始金額，cycle + 1；歷史交易紀錄保留。"""
-    account = get_account(db)
+    account = get_account(db, user)
     try:
         db.execute(delete(Position).where(Position.account_id == account.id))
         account.cash = account.initial_cash

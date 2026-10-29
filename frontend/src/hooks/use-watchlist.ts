@@ -9,16 +9,19 @@ import { errorMessage } from "@/services/api-client";
 import { watchlistApi } from "@/services/watchlist";
 
 import { useAlertTriggerHandler } from "./use-alerts";
+import { useAuth } from "./use-auth";
 import { useMarketStatus } from "./use-market";
 
 export const WATCHLIST_KEY = "watchlist";
 
 export function useWatchlist() {
+  const { user } = useAuth();
   const { data: status } = useMarketStatus();
   const openMarkets = new Set(status?.markets.filter((session) => session.is_open).map((session) => session.market));
   const onSuccess = useAlertTriggerHandler();
 
-  const swr = useSWR(WATCHLIST_KEY, () => watchlistApi.list(), {
+  // 未登入時 key 為 null，不會送出請求
+  const swr = useSWR(user ? WATCHLIST_KEY : null, () => watchlistApi.list(), {
     keepPreviousData: true,
     onSuccess,
     // 自選股中有任一市場在交易時段就每 10 秒更新報價

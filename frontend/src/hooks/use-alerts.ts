@@ -6,20 +6,31 @@ import useSWR, { useSWRConfig } from "swr";
 import { alertsApi, notificationsApi } from "@/services/alerts";
 import type { AlertEvent } from "@/types/api";
 
+import { useAuth } from "./use-auth";
+
 export const ALERTS_KEY = "alerts";
 export const ALERT_EVENTS_KEY = "alert-events";
 export const NOTIFICATIONS_KEY = "notifications";
 
 export function useAlerts() {
-  return useSWR(ALERTS_KEY, () => alertsApi.list(), { refreshInterval: 30_000, keepPreviousData: true });
+  const { user } = useAuth();
+  return useSWR(user ? ALERTS_KEY : null, () => alertsApi.list(), { refreshInterval: 30_000, keepPreviousData: true });
 }
 
 export function useAlertEvents() {
-  return useSWR(ALERT_EVENTS_KEY, () => alertsApi.events(100), { refreshInterval: 30_000, keepPreviousData: true });
+  const { user } = useAuth();
+  return useSWR(user ? ALERT_EVENTS_KEY : null, () => alertsApi.events(100), {
+    refreshInterval: 30_000,
+    keepPreviousData: true,
+  });
 }
 
 export function useNotifications() {
-  return useSWR(NOTIFICATIONS_KEY, () => notificationsApi.list(20), { refreshInterval: 20_000, keepPreviousData: true });
+  const { user } = useAuth();
+  return useSWR(user ? NOTIFICATIONS_KEY : null, () => notificationsApi.list(20), {
+    refreshInterval: 20_000,
+    keepPreviousData: true,
+  });
 }
 
 /** 提醒有變化（建立、觸發、已讀）時，更新提醒清單、觸發紀錄與通知鈴鐺 */

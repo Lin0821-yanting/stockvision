@@ -5,6 +5,25 @@ export type Currency = "TWD" | "USD";
 export type Period = "1M" | "3M" | "6M" | "1Y";
 export type QuoteKind = "realtime" | "close";
 
+export interface User {
+  id: number;
+  username: string;
+  display_name: string;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+export interface SessionInfo {
+  authenticated: boolean;
+  user: User | null;
+}
+
+export interface AuthResponse {
+  user: User;
+  expires_at: string;
+  message: string;
+}
+
 export interface ApiErrorBody {
   error: {
     code: string;

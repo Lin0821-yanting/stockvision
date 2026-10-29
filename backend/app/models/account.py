@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Date, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database.session import Base
@@ -11,11 +11,16 @@ from app.database.types import DecimalText, UTCDateTime, utcnow
 
 
 class Account(Base):
-    """模擬投資帳戶（本機單一使用者，id 固定為 1）。金額單位：新台幣。"""
+    """模擬投資帳戶，每位使用者一個。金額單位：新台幣。
+
+    user_id 為空代表單人模式留下的舊帳戶，第一位註冊的使用者會接收它。
+    """
 
     __tablename__ = "accounts"
+    __table_args__ = (Index("uq_accounts_user", "user_id", unique=True),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
     base_currency: Mapped[str] = mapped_column(String(3), default="TWD")
     initial_cash: Mapped[Decimal] = mapped_column(DecimalText())
     cash: Mapped[Decimal] = mapped_column(DecimalText())

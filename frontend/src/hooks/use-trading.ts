@@ -6,14 +6,16 @@ import useSWR, { useSWRConfig } from "swr";
 import { IDLE_REFRESH_MS, LIVE_REFRESH_MS } from "@/lib/market";
 import { tradingApi } from "@/services/trading";
 
+import { useAuth } from "./use-auth";
 import { useMarketStatus } from "./use-market";
 
 export const PORTFOLIO_KEY = "portfolio";
 
 export function usePortfolio() {
+  const { user } = useAuth();
   const { data: status } = useMarketStatus();
   const openMarkets = new Set(status?.markets.filter((session) => session.is_open).map((session) => session.market));
-  return useSWR(PORTFOLIO_KEY, () => tradingApi.portfolio(), {
+  return useSWR(user ? PORTFOLIO_KEY : null, () => tradingApi.portfolio(), {
     keepPreviousData: true,
     // 持有的股票所在市場開盤時每 10 秒重新估值，否則 5 分鐘
     refreshInterval: (latest) =>
@@ -22,7 +24,8 @@ export function usePortfolio() {
 }
 
 export function useTrades(scope: "current" | "all" = "current", limit = 100) {
-  return useSWR(["trades", scope, limit], () => tradingApi.trades(scope, limit), { keepPreviousData: true });
+  const { user } = useAuth();
+  return useSWR(user ? ["trades", scope, limit] : null, () => tradingApi.trades(scope, limit), { keepPreviousData: true });
 }
 
 /** 交易或重置後，更新所有和帳戶有關的畫面 */

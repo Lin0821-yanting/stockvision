@@ -22,11 +22,11 @@ import pytest  # noqa: E402
 import respx  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
-from app.core import clock  # noqa: E402
+from app.core import clock, security  # noqa: E402
 from app.core.market_hours import TAIPEI  # noqa: E402
 from app.database.session import Base, SessionLocal, engine, init_db  # noqa: E402
 from app.main import app  # noqa: E402
-from app.services import quote_service  # noqa: E402
+from app.services import auth_service, quote_service  # noqa: E402
 from app.services.cache import cache  # noqa: E402
 from app.services.providers import http  # noqa: E402
 
@@ -42,8 +42,10 @@ def fresh_state(monkeypatch):
     init_db()
     cache.clear()
     quote_service.reset_state()
+    auth_service.throttle.reset()
     monkeypatch.setattr(http, "RETRY_BACKOFF_SECONDS", 0)
     monkeypatch.setattr(quote_service, "MIS_MIN_INTERVAL_SECONDS", 0)
+    monkeypatch.setattr(security, "SCRYPT_N", 2**10)  # 測試用較低的雜湊成本；格式與驗證流程完全相同
     monkeypatch.setattr(clock, "now", lambda: DEFAULT_NOW)
     yield
 
@@ -67,8 +69,47 @@ def db():
 
 @pytest.fixture
 def client():
+    """未登入的 client。"""
     with TestClient(app) as test_client:
         yield test_client
+
+
+PASSWORD = "correct-horse-42"
+
+
+def register(test_client: TestClient, username: str = "alice", password: str = PASSWORD):
+    response = test_client.post(
+        "/api/auth/register",
+        json={"username": username, "password": password, "display_name": username.title()},
+    )
+    assert response.status_code == 201, response.text
+    return response
+
+
+@pytest.fixture
+def auth_client():
+    """已註冊並登入為 alice 的 client（cookie 保存在 TestClient 內）。"""
+    with TestClient(app) as test_client:
+        register(test_client)
+        yield test_client
+
+
+@pytest.fixture
+def make_client():
+    """建立多個各自獨立 cookie 的 client，用來測試不同使用者之間的資料隔離。"""
+    opened: list[TestClient] = []
+
+    def _make(username: str | None = None) -> TestClient:
+        test_client = TestClient(app)
+        test_client.__enter__()
+        opened.append(test_client)
+        if username:
+            register(test_client, username)
+        return test_client
+
+    yield _make
+    for test_client in opened:
+        test_client.__exit__(None, None, None)
 
 
 class FakeUpstream:

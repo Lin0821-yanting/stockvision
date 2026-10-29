@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.core import clock
 from app.core.errors import InvalidRequestError
+from app.models.user import User
 from app.schemas.compare import CompareOut, ComparePoint, CompareStockOut
 from app.schemas.stock import QuoteErrorOut
 from app.services import alert_service, analytics, history_service, quote_service
@@ -18,7 +19,7 @@ MAX_SYMBOLS = 4
 METHOD = "以所有股票都有交易的日期對齊（inner join），共同起始交易日的收盤價設為 100，標準化指數 = 當日收盤 ÷ 共同起始日收盤 × 100"
 
 
-async def compare(db: Session, entries: list[StockEntry], period: str) -> CompareOut:
+async def compare(db: Session, entries: list[StockEntry], period: str, user: User | None = None) -> CompareOut:
     if not MIN_SYMBOLS <= len(entries) <= MAX_SYMBOLS:
         raise InvalidRequestError(
             f"請選擇 {MIN_SYMBOLS} 到 {MAX_SYMBOLS} 檔不同的股票進行比較",
@@ -76,7 +77,7 @@ async def compare(db: Session, entries: list[StockEntry], period: str) -> Compar
         for timestamp in result.closes.index
     ]
 
-    triggered = await alert_service.process_quotes(db, list(quotes.values()))
+    triggered = await alert_service.process_quotes(db, list(quotes.values()), user)
     return CompareOut(
         period=period,
         symbols=[entry.symbol for entry in entries],
