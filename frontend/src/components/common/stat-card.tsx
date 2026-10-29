@@ -24,7 +24,12 @@ export function StatCard({
     <Card className="gap-0 py-4" data-testid={testId}>
       <CardContent className="px-4">
         <p className="text-xs text-muted-foreground">{label}</p>
-        <p className={cn("mt-1 truncate text-xl font-semibold tracking-tight sm:text-2xl", valueClassName)}>{value}</p>
+        <p
+          className={cn("mt-1 truncate text-base font-semibold tracking-tight sm:text-xl lg:text-2xl", valueClassName)}
+          title={typeof value === "string" ? value : undefined}
+        >
+          {value}
+        </p>
         {delta != null ? (
           <p className={cn("mt-0.5 text-xs font-medium", TONE_TEXT_CLASS[tone])}>
             <span aria-hidden>{TONE_ARROW[tone]} </span>
