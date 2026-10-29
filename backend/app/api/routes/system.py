@@ -8,6 +8,7 @@ from app import __version__
 from app.core.config import get_settings
 from app.database.types import utcnow
 from app.schemas.system import DataSourceStatus, HealthOut
+from app.services.scheduler import monitor
 
 router = APIRouter(prefix="/api", tags=["系統"])
 
@@ -50,4 +51,5 @@ def health() -> HealthOut:
                 else "未設定 FINNHUB_API_KEY，美股改用 FinMind 每日收盤資料",
             ),
         ],
+        alert_monitor=monitor.status(),
     )

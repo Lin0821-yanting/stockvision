@@ -6,6 +6,8 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
+from app.schemas.alert import MonitorStatusOut
+
 
 class DataSourceStatus(BaseModel):
     name: str
@@ -20,3 +22,4 @@ class HealthOut(BaseModel):
     version: str
     server_time: datetime
     data_sources: list[DataSourceStatus]
+    alert_monitor: MonitorStatusOut

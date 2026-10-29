@@ -16,11 +16,12 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app import __version__
-from app.api.routes import market, stocks, system, trading, watchlist
+from app.api.routes import alerts, market, notifications, stocks, system, trading, watchlist
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.database.session import init_db
 from app.services.providers.http import close_client
+from app.services.scheduler import monitor
 
 logger = logging.getLogger("stockvision")
 
@@ -36,7 +37,9 @@ StockVision 台美股智慧看盤與模擬投資平台的 Python 後端。
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
+    monitor.start()
     yield
+    monitor.shutdown()
     await close_client()
 
 
@@ -101,6 +104,8 @@ def create_app() -> FastAPI:
     app.include_router(stocks.router)
     app.include_router(watchlist.router)
     app.include_router(trading.router)
+    app.include_router(alerts.router)
+    app.include_router(notifications.router)
     return app
 
 

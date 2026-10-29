@@ -15,7 +15,7 @@ from app.models.watchlist import WatchlistItem
 from app.schemas.common import ERROR_RESPONSES
 from app.schemas.stock import QuoteErrorOut
 from app.schemas.watchlist import WatchlistCreate, WatchlistItemOut, WatchlistOut
-from app.services import catalog_service, quote_service
+from app.services import alert_service, catalog_service, quote_service
 from app.services.entities import StockEntry
 
 router = APIRouter(prefix="/api/watchlist", tags=["自選股"])
@@ -56,7 +56,8 @@ async def list_watchlist(
         if result.quote is None and result.error is not None:
             error = QuoteErrorOut(symbol=item.symbol, market=item.market, code=result.error.code, message=result.error.message)
         out.append(_item_out(item, quote=result.quote, quote_error=error))
-    return WatchlistOut(items=out)
+    triggered = await alert_service.process_quotes(db, [r.quote for r in results if r.quote is not None])
+    return WatchlistOut(items=out, triggered_alerts=triggered)
 
 
 @router.post(

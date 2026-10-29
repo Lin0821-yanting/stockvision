@@ -1,6 +1,7 @@
 import { GlobalSearch } from "./global-search";
 import { MarketStatusPills } from "./market-status-pills";
 import { MobileNav } from "./mobile-nav";
+import { NotificationBell } from "./notification-bell";
 
 export function Topbar() {
   return (
@@ -10,6 +11,7 @@ export function Topbar() {
         <GlobalSearch className="max-w-md flex-1" />
         <div className="ml-auto flex items-center gap-2">
           <MarketStatusPills className="hidden md:flex" />
+          <NotificationBell />
         </div>
       </div>
     </header>

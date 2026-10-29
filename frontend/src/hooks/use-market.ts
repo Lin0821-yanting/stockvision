@@ -6,6 +6,8 @@ import { IDLE_REFRESH_MS, LIVE_REFRESH_MS, marketOf } from "@/lib/market";
 import { marketApi, stocksApi } from "@/services/stocks";
 import type { Market, Period } from "@/types/api";
 
+import { useAlertTriggerHandler } from "./use-alerts";
+
 export function useMarketStatus() {
   return useSWR("market-status", () => marketApi.status(), { refreshInterval: 60_000 });
 }
@@ -19,9 +21,11 @@ export function useRefreshInterval(markets: Market[]): number {
 
 export function useStockDetail(symbol: string | null) {
   const refreshInterval = useRefreshInterval(symbol ? [marketOf(symbol)] : []);
+  const onSuccess = useAlertTriggerHandler();
   return useSWR(symbol ? ["stock", symbol] : null, () => stocksApi.detail(symbol!), {
     refreshInterval,
     keepPreviousData: true,
+    onSuccess,
   });
 }
 
@@ -35,7 +39,8 @@ export function useHistory(symbol: string | null, period: Period) {
 export function useQuotes(symbols: string[]) {
   const key = symbols.length ? ["quotes", ...symbols] : null;
   const refreshInterval = useRefreshInterval(symbols.map(marketOf));
-  return useSWR(key, () => stocksApi.quotes(symbols), { refreshInterval, keepPreviousData: true });
+  const onSuccess = useAlertTriggerHandler();
+  return useSWR(key, () => stocksApi.quotes(symbols), { refreshInterval, keepPreviousData: true, onSuccess });
 }
 
 export function useUsdTwd() {

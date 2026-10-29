@@ -20,7 +20,7 @@ from app.schemas.stock import (
     StockInfoOut,
     StockSearchOut,
 )
-from app.services import catalog_service, history_service, quote_service
+from app.services import alert_service, catalog_service, history_service, quote_service
 from app.services.entities import StockEntry
 
 router = APIRouter(prefix="/api/stocks", tags=["股票資料"])
@@ -94,7 +94,9 @@ async def get_quotes(
         for r in results
         if r.quote is None and r.error is not None
     ]
-    return QuotesOut(quotes=quotes, errors=errors)
+    # 取得新行情時同步檢查價格提醒
+    triggered = await alert_service.process_quotes(db, quotes)
+    return QuotesOut(quotes=quotes, errors=errors, triggered_alerts=triggered)
 
 
 @router.get("/{symbol}", response_model=StockDetailOut, summary="個股資訊與最新報價", responses=ERROR_RESPONSES)
@@ -102,7 +104,14 @@ async def get_stock(symbol: str, db: Session = Depends(get_db)) -> StockDetailOu
     entry = await catalog_service.resolve(db, symbol)
     quote = await quote_service.get_quote(entry)
     low_20d, is_20d_low = await history_service.twenty_day_low(entry, quote)
-    return StockDetailOut(stock=stock_info(entry), quote=quote, low_20d=low_20d, is_20d_low=is_20d_low)
+    triggered = await alert_service.process_quotes(db, [quote])
+    return StockDetailOut(
+        stock=stock_info(entry),
+        quote=quote,
+        low_20d=low_20d,
+        is_20d_low=is_20d_low,
+        triggered_alerts=triggered,
+    )
 
 
 @router.get(

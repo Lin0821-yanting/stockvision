@@ -63,6 +63,7 @@ export interface QuoteError {
 export interface QuotesResponse {
   quotes: Quote[];
   errors: QuoteError[];
+  triggered_alerts: AlertEvent[];
 }
 
 export interface StockDetail {
@@ -70,6 +71,7 @@ export interface StockDetail {
   quote: Quote;
   low_20d: number | null;
   is_20d_low: boolean;
+  triggered_alerts: AlertEvent[];
 }
 
 export interface PriceBar {
@@ -151,6 +153,98 @@ export interface WatchlistItem {
 
 export interface WatchlistResponse {
   items: WatchlistItem[];
+  triggered_alerts: AlertEvent[];
+}
+
+// ---------------------------------------------------------------- 價格提醒
+
+export type AlertCondition = "PRICE_LTE" | "PRICE_GTE" | "NEW_20D_LOW";
+export type TriggerMode = "ONCE" | "EVERY_CROSS";
+
+export interface AlertEvent {
+  id: number;
+  alert_id: number | null;
+  symbol: string;
+  market: Market;
+  name: string;
+  condition: AlertCondition;
+  condition_label: string;
+  target_price: number | null;
+  triggered_price: number;
+  reference_low: number | null;
+  price_kind: QuoteKind;
+  price_source: string;
+  price_as_of: string | null;
+  message: string;
+  triggered_at: string;
+  read_at: string | null;
+}
+
+export interface PriceAlert {
+  id: number;
+  symbol: string;
+  market: Market;
+  name: string;
+  exchange: string;
+  currency: Currency;
+  condition: AlertCondition;
+  condition_label: string;
+  target_price: number | null;
+  trigger_mode: TriggerMode;
+  is_active: boolean;
+  status: "monitoring" | "triggered" | "disabled";
+  status_label: string;
+  note: string | null;
+  last_condition_met: boolean;
+  last_checked_at: string | null;
+  last_checked_price: number | null;
+  last_price_kind: QuoteKind | null;
+  last_triggered_at: string | null;
+  trigger_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MonitorStatus {
+  enabled: boolean;
+  interval_seconds: number;
+  running: boolean;
+  last_run_at: string | null;
+  last_result: string;
+  next_run_at: string | null;
+  markets_open: Market[];
+  explanation: string;
+}
+
+export interface AlertList {
+  alerts: PriceAlert[];
+  monitor: MonitorStatus;
+}
+
+export interface AlertMutation {
+  alert: PriceAlert;
+  triggered: AlertEvent[];
+}
+
+export interface AlertCheck {
+  checked_alerts: number;
+  checked_symbols: number;
+  triggered: AlertEvent[];
+  errors: string[];
+  checked_at: string;
+}
+
+export interface AlertInput {
+  symbol: string;
+  condition: AlertCondition;
+  target_price: number | null;
+  trigger_mode: TriggerMode;
+  note: string | null;
+}
+
+export interface Notifications {
+  items: AlertEvent[];
+  unread_count: number;
 }
 
 // ---------------------------------------------------------------- 模擬交易

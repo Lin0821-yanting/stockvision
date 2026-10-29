@@ -7,6 +7,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.alert import AlertEventOut
 from app.schemas.common import JsonDecimal
 
 Market = Literal["TW", "US"]
@@ -65,6 +66,7 @@ class QuoteErrorOut(BaseModel):
 class QuotesOut(BaseModel):
     quotes: list[QuoteOut]
     errors: list[QuoteErrorOut] = []
+    triggered_alerts: list[AlertEventOut] = Field(default=[], description="這次取得行情時新觸發的提醒")
 
 
 class StockDetailOut(BaseModel):
@@ -72,6 +74,7 @@ class StockDetailOut(BaseModel):
     quote: QuoteOut
     low_20d: JsonDecimal | None = Field(default=None, description="前 20 個交易日的最低收盤價")
     is_20d_low: bool = Field(description="最新價格是否低於前 20 個交易日的最低收盤價（創 20 日新低）")
+    triggered_alerts: list[AlertEventOut] = Field(default=[], description="這次取得行情時新觸發的提醒")
 
 
 class PriceBar(BaseModel):

@@ -6,6 +6,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.schemas.alert import AlertEventOut
 from app.schemas.stock import Market, QuoteErrorOut, QuoteOut
 
 
@@ -27,3 +28,4 @@ class WatchlistItemOut(BaseModel):
 
 class WatchlistOut(BaseModel):
     items: list[WatchlistItemOut]
+    triggered_alerts: list[AlertEventOut] = []
